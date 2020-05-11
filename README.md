@@ -1,7 +1,5 @@
 # aws_io
 
-# aws_io
-
 ## Dependencies
 - Pytorch 1.5
 - AWS-SDK-CPP (core and S3)
