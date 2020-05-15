@@ -25,6 +25,7 @@
 #include <fstream>
 #include <string>
 #include <regex>
+#include "absl/strings/str_cat.h"
 
 namespace {
     static const uint64_t s3MultiPartDownloadChunkSize = 2 * 1024 * 1024;  // 50 MB
@@ -105,7 +106,6 @@ namespace {
              : bucket_name_(bucket), object_name_(object), multi_part_download_(multi_part_download), transfer_manager_(transfer_manager), s3_client_(s3_client) {}
 
         void read(const std::string &fname, uint64_t offset, size_t n, char *buffer) {
-       //     parseS3Path(fname);
 
           //  multi_part_download = true;
             if (multi_part_download_) {
@@ -116,8 +116,6 @@ namespace {
         }
 
         void readS3Client(uint64_t offset, size_t n, char *buffer) {
-            //    Aws::Client::ClientConfiguration cfg = setUpS3Config();
-       //     this->s3_client = initializeS3Client();
 
             std::cout << "ReadFilefromS3 s3://" << this->bucket_name_ << "/" << this->object_name_ << " from "
                       << offset << " for n:" << n;
@@ -126,11 +124,8 @@ namespace {
 
             getObjectRequest.WithBucket(this->bucket_name_.c_str()).WithKey(this->object_name_.c_str());
 
-            //     getObjectRequest.WithBucket(bucket_.c_str()).WithKey(object_.c_str());
-            std::strcat("bytes=", offset);
-            std::strcat("bytes=", "-");
-            std::string bytes = std::strcat("bytes=", offset + n - 1);
-            getObjectRequest.SetRange(bytes.c_str());
+	    std::string bytes = absl::StrCat("bytes=", offset, "-", offset + n - 1);            
+	    getObjectRequest.SetRange(bytes.c_str());
 
             // When you don’t want to load the entire file into memory,
             // you can use IOStreamFactory in AmazonWebServiceRequest to pass a lambda to create a string stream.
@@ -159,7 +154,6 @@ namespace {
         }
 
         void readS3TransferManager(uint64_t offset, size_t n, char *buffer) {
-         //   initializeTransferManager();
             std::cout << "ReadFilefromS3 s3:// using Transfer Manager API: ";
 
             auto create_stream_fn = [&]() {  // create stream lambda fn
@@ -224,8 +218,6 @@ std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor> initializeExecutor(
 }
 
 std::shared_ptr<Aws::Transfer::TransferManager> initializeTransferManager() {
-   // std::shared_ptr<Aws::S3::S3Client> s3_client = initializeS3Client();
-  //  auto executor = std::shared_ptr<Aws::Utils::Threading::PooledThreadExecutor>("executor", executorPoolSize);
     Aws::Transfer::TransferManagerConfiguration transfer_config(initializeExecutor().get());
     transfer_config.s3Client = initializeS3Client();
 
@@ -242,7 +234,6 @@ int main(int argc, char** argv){
     parseS3Path("s3://hpptel-dev/train_32x32.mat", &bucket, &object);
     bool use_tm = true;
     S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
-    // s3handler.read("s3://hpptel-dev/train_32x32.mat", 0, 1, "buf");
 }
 
 
