@@ -10,8 +10,7 @@
 #include <aws/s3/S3Client.h>
 #include <aws/transfer/TransferManager.h>
 
-namespace {
-
+namespace awsio {
 
 // In memory stream implementation
 // AWS Streams destroy the buffer (buf) passed, so creating a new
@@ -27,6 +26,26 @@ namespace {
         virtual ~S3UnderlyingStream() = default;
     };
 
+    class S3Init {
+    private:
+        std::shared_ptr <Aws::S3::S3Client> s3_client_;
+
+        std::shared_ptr <Aws::S3::S3Client> initializeS3Client();
+
+        std::shared_ptr <Aws::Transfer::TransferManager> initializeTransferManager();
+
+        std::shared_ptr <Aws::Transfer::TransferManager> transfer_manager_;
+
+        std::shared_ptr <Aws::Utils::Threading::PooledThreadExecutor> initializeExecutor();
+
+    public:
+        S3Init();
+
+        ~S3Init();
+
+        void s3_read(std::string file_url, bool use_tm);
+    };
 }
+
 #endif //AWSIO_S3_IO_H
 
