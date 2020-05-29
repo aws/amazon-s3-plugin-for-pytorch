@@ -107,7 +107,6 @@ namespace awsio {
                       transfer_manager_(transfer_manager), s3_client_(s3_client) {}
 
             void read(uint64_t offset, size_t n, char *buffer) {
-                //  multi_part_download = true;
                 if (multi_part_download_) {
                     return readS3TransferManager(offset, n, buffer);
                 } else {
@@ -228,8 +227,6 @@ namespace awsio {
     }
 
 
-//class S3Init {
-//public:
     S3Init::S3Init() : s3_client_(nullptr, ShutdownClient), transfer_manager_(nullptr, ShutdownTransferManager) {}
 
     S3Init::~S3Init() {}
@@ -243,6 +240,5 @@ namespace awsio {
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
         s3handler.read(offset, bufferSize, buffer.get());
     }
-//};
 
 }

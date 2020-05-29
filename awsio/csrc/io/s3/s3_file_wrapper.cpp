@@ -16,7 +16,6 @@ namespace {
         py::class_<S3Init>(m, "S3Init")
                 .def(py::init<>())
                 .def("s3_read", [](S3Init* self, const std::string &file_url, bool use_tm) {
-                  //  awsio::S3Init s3caller;
 		    self->s3_read(file_url, use_tm);
                 });
     }
