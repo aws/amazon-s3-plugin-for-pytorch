@@ -32,7 +32,6 @@ class MNIST(VisionDataset):
     """
 
     localfile = 'tempfile'
-  #  s3 = boto3.client('s3', config=Config(signature_version='s3v4'))
     resources = [
         "s3://roshanin-test-data/train-images-idx3-ubyte.gz",
         "s3://roshanin-test-data/train-labels-idx1-ubyte.gz",
@@ -127,7 +126,7 @@ class MNIST(VisionDataset):
                                             self.test_file)))
 
 
-    def download_and_extract_s3_archive(url, download_root, extract_root=None, filename=None,
+    def download_and_extract_s3_archive(s3_downloader, url, download_root, extract_root=None, filename=None,
                                         md5=None, remove_finished=False):
 
         download_root = os.path.expanduser(download_root)
@@ -136,7 +135,7 @@ class MNIST(VisionDataset):
         if not filename:
             filename = os.path.basename(url)
 
-        _pywrap_s3_io.S3Init(url, True)
+        s3_downloader.s3_read(url, False)
 
         archive = os.path.join(download_root, filename)
         print("Extracting {} to {}".format(archive, extract_root))
@@ -152,10 +151,11 @@ class MNIST(VisionDataset):
         os.makedirs(self.raw_folder, exist_ok=True)
         os.makedirs(self.processed_folder, exist_ok=True)
 
-        # download filess
+        s3_downloader = _pywrap_s3_io.S3Init()
+        # download files
         for url in self.resources:
             print(url)
-            self.download_and_extract_s3_archive(url, download_root=self.raw_folder)
+            self.download_and_extract_s3_archive(s3_downloader, url, download_root=self.raw_folder)
 
         # process and save as torch files
         print('Processing...')

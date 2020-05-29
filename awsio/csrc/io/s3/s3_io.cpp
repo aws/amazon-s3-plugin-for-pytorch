@@ -66,6 +66,7 @@ namespace awsio {
                     cfg.verifySSL = true;
                 }
             }
+            cfg.region = "us-west-2";
             return cfg;
         }
 
@@ -105,7 +106,7 @@ namespace awsio {
                     : bucket_name_(bucket), object_name_(object), multi_part_download_(multi_part_download),
                       transfer_manager_(transfer_manager), s3_client_(s3_client) {}
 
-            void read(const std::string &fname, uint64_t offset, size_t n, char *buffer) {
+            void read(uint64_t offset, size_t n, char *buffer) {
                 //  multi_part_download = true;
                 if (multi_part_download_) {
                     return readS3TransferManager(offset, n, buffer);
@@ -233,10 +234,14 @@ namespace awsio {
 
     S3Init::~S3Init() {}
 
-    void S3Init::s3_read(std::string file_url, bool use_tm) {
+    void S3Init::s3_read(const std::string &file_url, bool use_tm) {
         std::string bucket, object;
+        uint64_t offset = 0;
+        static const size_t bufferSize = 1024 * 1024;
+	std::unique_ptr<char[]> buffer(new char[bufferSize]);
         parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
+        s3handler.read(offset, bufferSize, buffer.get());
     }
 //};
 

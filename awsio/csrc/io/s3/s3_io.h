@@ -30,20 +30,20 @@ namespace awsio {
     private:
         std::shared_ptr <Aws::S3::S3Client> s3_client_;
 
-        std::shared_ptr <Aws::S3::S3Client> initializeS3Client();
+//        std::shared_ptr <Aws::S3::S3Client> initializeS3Client();
 
-        std::shared_ptr <Aws::Transfer::TransferManager> initializeTransferManager();
+  //      std::shared_ptr <Aws::Transfer::TransferManager> initializeTransferManager();
 
         std::shared_ptr <Aws::Transfer::TransferManager> transfer_manager_;
 
-        std::shared_ptr <Aws::Utils::Threading::PooledThreadExecutor> initializeExecutor();
+    //    std::shared_ptr <Aws::Utils::Threading::PooledThreadExecutor> initializeExecutor();
 
     public:
         S3Init();
 
         ~S3Init();
 
-        void s3_read(std::string file_url, bool use_tm);
+        void s3_read(const std::string &file_url, bool use_tm);
     };
 }
 
