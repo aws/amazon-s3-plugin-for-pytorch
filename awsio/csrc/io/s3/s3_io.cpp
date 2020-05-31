@@ -198,38 +198,48 @@ namespace awsio {
         };
     }
 
-    std::shared_ptr <Aws::S3::S3Client> initializeS3Client() {
+
+    S3Init::S3Init() : s3_client_(nullptr, ShutdownClient), transfer_manager_(nullptr, ShutdownTransferManager), initialization_lock_() {}
+
+    S3Init::~S3Init() {}
+
+
+    std::shared_ptr <Aws::S3::S3Client> S3Init::initializeS3Client() {
+        std::lock_guard<std::mutex> lock(this->initialization_lock_);
+	if(this->s3_client_.get() == nullptr) {
         Aws::SDKOptions options;
         options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Trace;
 
         Aws::InitAPI(options);
         // Set up the request
-        auto s3_client = std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
+        this->s3_client_ = std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
                 setUpS3Config(), Aws::Client::AWSAuthV4Signer::PayloadSigningPolicy::Never, false));
-        return s3_client;
+        }
+	return this->s3_client_;
     }
 
-    std::shared_ptr <Aws::Utils::Threading::PooledThreadExecutor> initializeExecutor() {
-        auto executor = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
+    std::shared_ptr <Aws::Utils::Threading::PooledThreadExecutor> S3Init::initializeExecutor() {
+        if (this->executor_.get() == nullptr) {
+	this->executor_ = Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
                 "executor", executorPoolSize);
-        return executor;
+	}
+        return executor_;
     }
 
-    std::shared_ptr <Aws::Transfer::TransferManager> initializeTransferManager() {
-        Aws::Transfer::TransferManagerConfiguration transfer_config(initializeExecutor().get());
-        transfer_config.s3Client = initializeS3Client();
+    std::shared_ptr <Aws::Transfer::TransferManager> S3Init::initializeTransferManager() {
+        std::shared_ptr<Aws::S3::S3Client> s3_client = initializeS3Client();
+        std::lock_guard<std::mutex> lock(this->initialization_lock_);
 
+	if (this->transfer_manager_.get() == nullptr) {
+        Aws::Transfer::TransferManagerConfiguration transfer_config(initializeExecutor().get());
+        transfer_config.s3Client = s3_client;
         // This buffer is what we used to initialize streambuf and is in memory
         transfer_config.bufferSize = s3MultiPartDownloadChunkSize;
         transfer_config.transferBufferMaxHeapSize = (executorPoolSize + 1) * s3MultiPartDownloadChunkSize;
-        auto transfer_manager = Aws::Transfer::TransferManager::Create(transfer_config);
-        return transfer_manager;
+        this->transfer_manager_ = Aws::Transfer::TransferManager::Create(transfer_config);
+	}
+        return transfer_manager_;
     }
-
-
-    S3Init::S3Init() : s3_client_(nullptr, ShutdownClient), transfer_manager_(nullptr, ShutdownTransferManager) {}
-
-    S3Init::~S3Init() {}
 
     void S3Init::s3_read(const std::string &file_url, bool use_tm) {
         std::string bucket, object;
