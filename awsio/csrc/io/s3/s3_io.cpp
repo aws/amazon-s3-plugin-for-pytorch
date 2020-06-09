@@ -25,6 +25,7 @@
 #include <fstream>
 #include <string>
 #include "absl/strings/str_cat.h"
+#include "absl/strings/string_view.h" 
 
 namespace awsio {
     namespace {
@@ -106,15 +107,15 @@ namespace awsio {
                     : bucket_name_(bucket), object_name_(object), multi_part_download_(multi_part_download),
                       transfer_manager_(transfer_manager), s3_client_(s3_client) {}
 
-            void read(uint64_t offset, size_t n, char *buffer) {
+            bool read(uint64_t offset, size_t n, char *buffer, StringContainer *result) {
                 if (multi_part_download_) {
-                    return readS3TransferManager(offset, n, buffer);
+                    return readS3TransferManager(offset, n, buffer, result);
                 } else {
-                    return readS3Client(offset, n, buffer);
+                    return readS3Client(offset, n, buffer, result);
                 }
             }
 
-            void readS3Client(uint64_t offset, size_t n, char *buffer) {
+            bool readS3Client(uint64_t offset, size_t n, char *buffer, StringContainer *result) {
 
                 std::cout << "ReadFilefromS3 s3://" << this->bucket_name_ << "/" << this->object_name_ << " from "
                           << offset << " for n:" << n;
@@ -139,20 +140,17 @@ namespace awsio {
                     auto error = getObjectOutcome.GetError();
                     std::cout << "ERROR: " << error.GetExceptionName() << ": "
                               << error.GetMessage() << std::endl;
-                } else {
+                    return false;
+		} else {
                     n = getObjectOutcome.GetResult().GetContentLength();
                     // read data as a block:
                     getObjectOutcome.GetResult().GetBody().read(buffer, n);
-                    // buffer contains entire file
-                    Aws::OFStream storeFile(object_name_.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
-                    storeFile.write((const char *) (buffer), n);
-                    storeFile.close();
-                    std::cout << "File dumped to local file!" << std::endl;
-
+		   *result = StringContainer(buffer, n);
+		   return true;
                 }
             }
 
-            void readS3TransferManager(uint64_t offset, size_t n, char *buffer) {
+            bool readS3TransferManager(uint64_t offset, size_t n, char *buffer, StringContainer *result) {
                 std::cout << "ReadFilefromS3 s3:// using Transfer Manager API: ";
 
                 auto create_stream_fn = [&]() {  // create stream lambda fn
@@ -172,20 +170,23 @@ namespace awsio {
                                                                     create_stream_fn);
                 downloadHandle->WaitUntilFinished();
                 std::cout << "File download to memory finished!" << std::endl;
+		
+		Aws::OFStream storeFile(object_name_.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
 
                 if (downloadHandle->GetStatus() != Aws::Transfer::TransferStatus::COMPLETED) {
                     auto error = downloadHandle->GetLastError();
-                    std::cout << "ERROR: " << error.GetExceptionName() << ": "
-                              << error.GetMessage() << std::endl;
+		    if (error.GetResponseCode() ==
+          		Aws::Http::HttpResponseCode::REQUESTED_RANGE_NOT_SATISFIABLE) {
+			n = 0;
+			*result = StringContainer(buffer, n);                    
+			std::cout << "ERROR: " << error.GetExceptionName() << ": " << error.GetMessage() << std::endl;
+
+		    }
+		std::cout << "ERROR: " << error.GetExceptionName() << ": " << error.GetMessage() << std::endl;
                 } else {
                     n = downloadHandle->GetBytesTotalSize();
-
-                    // write buffered data to local file copy
-                    Aws::OFStream storeFile(object_name_.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
-                    storeFile.write((const char *) (buffer), downloadHandle->GetBytesTransferred());
-                    storeFile.close();
-                    std::cout << "File dumped to local file!" << std::endl;
-
+		    *result = StringContainer(buffer, downloadHandle->GetBytesTransferred());
+		return true;
                 }
             }
 
@@ -244,11 +245,43 @@ namespace awsio {
     void S3Init::s3_read(const std::string &file_url, bool use_tm) {
         std::string bucket, object;
         uint64_t offset = 0;
-        static const size_t bufferSize = 1024 * 1024;
+	uint64_t result_size = 0;
+        static const size_t bufferSize = 16* 1024 * 1024;
 	std::unique_ptr<char[]> buffer(new char[bufferSize]);
-        parseS3Path(file_url, &bucket, &object);
+	std::stringstream ss;
+
+	uint64_t file_size = 236.6*1024*1024;
+	std::size_t part_count = (std::max)(
+                static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
+                static_cast<std::size_t>(1));
+
+	
+	parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
-        s3handler.read(offset, bufferSize, buffer.get());
-    }
+
+        for (int i = 0; i < part_count; i++) {
+            offset = i * bufferSize;
+            StringContainer read_chunk;
+            bool flag = s3handler.read(offset, bufferSize, buffer.get(), &read_chunk);
+
+                if (read_chunk.size() != 0) {
+                    ss.write(read_chunk.data(), read_chunk.size());
+                    result_size += read_chunk.size();
+                }
+                if (result_size == file_size) {
+                    break;
+                }
+                if (read_chunk.size() != bufferSize) {
+                    std::cout << "Result size and buffer size did not match";
+                    break;
+                }
+
+        }
+
+        Aws::OFStream storeFile(object.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
+        storeFile << ss.rdbuf();
+        storeFile.close();
+        std::cout << "File dumped to local file!" << std::endl;
+	}
 
 }

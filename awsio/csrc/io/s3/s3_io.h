@@ -10,7 +10,7 @@
 #include <aws/s3/S3Client.h>
 #include <aws/transfer/TransferManager.h>
 #include <mutex>
-
+#include "absl/strings/string_view.h"
 namespace awsio {
 // In memory stream implementation
 // AWS Streams destroy the buffer (buf) passed, so creating a new
@@ -25,6 +25,8 @@ namespace awsio {
 
         virtual ~S3UnderlyingStream() = default;
     };
+
+    using StringContainer = absl::string_view;
 
     class S3Init {
     private:
