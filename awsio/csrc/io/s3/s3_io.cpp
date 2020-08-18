@@ -85,18 +85,33 @@ namespace awsio {
             }
         }
 
-        void parseS3Path(const std::string &fname, std::string *bucket, std::string *object) {
-            std::string delimiter1 = "://";
-            std::string delimiter2 = "/";
 
-            std::string str = fname.substr(fname.find_first_of(delimiter1) + delimiter1.length(), std::string::npos);
-            size_t last = 0;
-            size_t next = 0;
-            while ((next = str.find(delimiter2, last)) != std::string::npos) {
-                *bucket = str.substr(last, next - last);
-                last = next + 1;
+        void parseS3Path(const std::string &fname, std::string *bucket, std::string *object) {
+
+            if (fname.empty()) {
+                throw std::invalid_argument{"The filename cannot be an empty string."};
             }
-            *object = str.substr(last);
+
+            if (fname.size() < 5 || fname.substr(0, 5) != "s3://") {
+                throw std::invalid_argument{"The filename must start with the S3 scheme."};
+            }
+
+            std::string path = fname.substr(5);
+
+            if (path.empty()) {
+                throw std::invalid_argument{"The filename cannot be an empty string."};
+            }
+
+            auto pos = path.find_first_of('/');
+            if (pos == std::string::npos) {
+                throw std::invalid_argument{"The filename does not contain a key."};
+            }
+            if (pos == 0) {
+                throw std::invalid_argument{"The filename does not contain a bucket name."};
+            }
+            *bucket = path.substr(0, pos);
+            *object = path.substr(pos + 1);
+
         }
 
         class S3FS {
