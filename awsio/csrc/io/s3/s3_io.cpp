@@ -27,6 +27,8 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h" 
 
+static const char* kS3FileSystemAllocationTag = "S3FileSystemAllocation";
+
 namespace awsio {
     namespace {
         static const uint64_t s3MultiPartDownloadChunkSize = 2 * 1024 * 1024;  // 50 MB
@@ -265,14 +267,13 @@ namespace awsio {
 	std::unique_ptr<char[]> buffer(new char[bufferSize]);
 	std::stringstream ss;
 
-	uint64_t file_size = 236.6*1024*1024;
-	std::size_t part_count = (std::max)(
-                static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
-                static_cast<std::size_t>(1));
-
-	
 	parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
+
+	uint64_t file_size = this->get_file_size(file_url, bucket, object);
+	std::size_t part_count = (std::max)(
+                static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
+                static_cast<std::size_t>(1));	
 
         for (int i = 0; i < part_count; i++) {
             offset = i * bufferSize;
@@ -297,6 +298,20 @@ namespace awsio {
         storeFile << ss.rdbuf();
         storeFile.close();
         std::cout << "File dumped to local file!" << std::endl;
-	}
+    }
+
+    uint64_t S3Init::get_file_size(const std::string &file_url,
+                                   const std::string &bucket,
+                                   const std::string &object) {
+        // Assume the bucket and object both exist
+        Aws::S3::Model::HeadObjectRequest headObjectRequest;
+        headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
+        headObjectRequest.SetResponseStreamFactory(
+            []() { return Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag); });
+        auto headObjectOutcome = this->initializeS3Client()->HeadObject(headObjectRequest);
+        if (headObjectOutcome.IsSuccess()) {
+            return headObjectOutcome.GetResult().GetContentLength();
+        }
+    }
 
 }
