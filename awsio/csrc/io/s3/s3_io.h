@@ -45,7 +45,7 @@ namespace awsio {
         std::shared_ptr <Aws::Utils::Threading::PooledThreadExecutor> initializeExecutor();
         std::shared_ptr <Aws::Transfer::TransferManager> initializeTransferManager();
         
-        void s3_read(const std::string &file_url, bool use_tm);
+        void s3_read(const std::string &file_url, std::string *result, bool use_tm);
     };
 }
 

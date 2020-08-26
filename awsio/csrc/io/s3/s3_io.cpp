@@ -257,7 +257,7 @@ namespace awsio {
         return transfer_manager_;
     }
 
-    void S3Init::s3_read(const std::string &file_url, bool use_tm) {
+    void S3Init::s3_read(const std::string &file_url, std::string *result,  bool use_tm) {
         std::string bucket, object;
         uint64_t offset = 0;
 	uint64_t result_size = 0;
@@ -270,6 +270,7 @@ namespace awsio {
                 static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
                 static_cast<std::size_t>(1));
 
+        result->resize(file_size);
 	
 	parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
@@ -293,10 +294,13 @@ namespace awsio {
 
         }
 
-        Aws::OFStream storeFile(object.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
-        storeFile << ss.rdbuf();
-        storeFile.close();
-        std::cout << "File dumped to local file!" << std::endl;
+
+        memcpy((char*)(result->data()), ss.str().data(), static_cast<size_t>(file_size));
+
+      //  Aws::OFStream storeFile(object.c_str(), Aws::OFStream::out | Aws::OFStream::trunc);
+     //   storeFile << ss.rdbuf();
+     //   storeFile.close();
+     //   std::cout << "File dumped to local file!" << std::endl;
 	}
 
 }
