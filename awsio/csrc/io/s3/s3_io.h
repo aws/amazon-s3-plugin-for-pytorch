@@ -46,6 +46,10 @@ namespace awsio {
         std::shared_ptr <Aws::Transfer::TransferManager> initializeTransferManager();
         
         void s3_read(const std::string &file_url, std::string *result, bool use_tm);
+        bool file_exists(const std::string &file_url,
+                        const std::string &bucket,
+                        const std::string &object);
+
         uint64_t get_file_size(const std::string &file_url,
                                const std::string &bucket,
                                const std::string &object);

@@ -271,6 +271,9 @@ namespace awsio {
 	parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
 
+    if (!this->FileExists(file_url, bucket, object)) {
+        throw std::invalid_argument{"The specified file doesn't exist."};
+    }
 	uint64_t file_size = this->get_file_size(file_url, bucket, object);
 	std::size_t part_count = (std::max)(
                 static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
@@ -298,6 +301,20 @@ namespace awsio {
 
         memcpy((char*)(result->data()), ss.str().data(), static_cast<size_t>(file_size));
 
+    }
+
+    bool S3Init::file_exists(const std::string &file_url,
+                            const std::string &bucket,
+                            const std::string &object) {
+        Aws::S3::Model::HeadObjectRequest headObjectRequest;
+        headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
+        headObjectRequest.SetResponseStreamFactory(
+            []() { return Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag); });
+        auto headObjectOutcome = this->initializeS3Client()->HeadObject(headObjectRequest);
+        if (headObjectOutcome.IsSuccess()) {
+            return true;
+        }
+        return false;
     }
 
     uint64_t S3Init::get_file_size(const std::string &file_url,
