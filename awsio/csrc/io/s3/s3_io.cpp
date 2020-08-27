@@ -271,7 +271,7 @@ namespace awsio {
 	parseS3Path(file_url, &bucket, &object);
         S3FS s3handler(bucket, object, use_tm, initializeTransferManager(), initializeS3Client());
 
-    if (!this->FileExists(file_url, bucket, object)) {
+    if (!this->file_exists(file_url, bucket, object)) {
         throw std::invalid_argument{"The specified file doesn't exist."};
     }
 	uint64_t file_size = this->get_file_size(file_url, bucket, object);
