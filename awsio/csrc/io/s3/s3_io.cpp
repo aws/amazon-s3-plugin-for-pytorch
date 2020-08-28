@@ -286,7 +286,13 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     std::string bucket, object;
     uint64_t offset = 0;
     uint64_t result_size = 0;
-    static const size_t bufferSize = 16 * 1024 * 1024;
+
+    static size_t bufferSize = 16 * 1024 * 1024;
+    const char* bufferSizeStr = getenv("S3_BUFFER_SIZE");
+    if (bufferSizeStr) {
+        bufferSize = std::stoull(bufferSizeStr);
+    }
+
     std::unique_ptr<char[]> buffer(new char[bufferSize]);
     std::stringstream ss;
 
