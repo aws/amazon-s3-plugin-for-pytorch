@@ -27,10 +27,10 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
-static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
-
 namespace awsio {
 namespace {
+static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
+static const size_t s3ReadBufferSize = 16 * 1024 * 1024;               // 16 MB
 static const uint64_t s3MultiPartDownloadChunkSize = 2 * 1024 * 1024;  // 50 MB
 static const int downloadRetries = 3;
 static const int64_t s3TimeoutMsec = 300000;
@@ -287,8 +287,8 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     uint64_t offset = 0;
     uint64_t result_size = 0;
 
-    static size_t bufferSize = 16 * 1024 * 1024;
-    const char* bufferSizeStr = getenv("S3_BUFFER_SIZE");
+    static size_t bufferSize = s3ReadBufferSize;
+    const char *bufferSizeStr = getenv("S3_BUFFER_SIZE");
     if (bufferSizeStr) {
         bufferSize = std::stoull(bufferSizeStr);
     }
