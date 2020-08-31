@@ -231,7 +231,14 @@ class S3FS {
 S3Init::S3Init()
     : s3_client_(nullptr, ShutdownClient),
       transfer_manager_(nullptr, ShutdownTransferManager),
-      initialization_lock_() {}
+      initialization_lock_() {
+    // Load reading parameters
+    bufferSize = s3ReadBufferSize;
+    const char *bufferSizeStr = getenv("S3_BUFFER_SIZE");
+    if (bufferSizeStr) {
+        bufferSize = std::stoull(bufferSizeStr);
+    }
+}
 
 S3Init::~S3Init() {}
 
@@ -287,18 +294,12 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     uint64_t offset = 0;
     uint64_t result_size = 0;
 
-    static size_t bufferSize = s3ReadBufferSize;
-    const char *bufferSizeStr = getenv("S3_BUFFER_SIZE");
-    if (bufferSizeStr) {
-        bufferSize = std::stoull(bufferSizeStr);
-    }
-
-    std::unique_ptr<char[]> buffer(new char[bufferSize]);
-    std::stringstream ss;
-
     parseS3Path(file_url, &bucket, &object);
     S3FS s3handler(bucket, object, use_tm, initializeTransferManager(),
                    initializeS3Client());
+
+    std::unique_ptr<char[]> buffer(new char[bufferSize]);
+    std::stringstream ss;
 
     if (!this->file_exists(file_url, bucket, object)) {
         throw std::invalid_argument{"The specified file doesn't exist."};
