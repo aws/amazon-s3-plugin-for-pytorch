@@ -19,6 +19,7 @@
 #include <aws/s3/model/GetObjectRequest.h>
 #include <aws/s3/model/HeadBucketRequest.h>
 #include <aws/s3/model/HeadObjectRequest.h>
+#include <aws/s3/model/ListObjectsRequest.h>
 #include <aws/transfer/TransferManager.h>
 
 #include <fstream>
@@ -106,15 +107,16 @@ void parseS3Path(const std::string &fname, std::string *bucket,
     }
 
     auto pos = path.find_first_of('/');
-    if (pos == std::string::npos) {
-        throw std::invalid_argument{"The filename does not contain a key."};
-    }
     if (pos == 0) {
         throw std::invalid_argument{
             "The filename does not contain a bucket name."};
     }
+
     *bucket = path.substr(0, pos);
     *object = path.substr(pos + 1);
+    if (pos == std::string::npos) {
+        *object = "";
+    }
 }
 
 class S3FS {
@@ -140,8 +142,9 @@ class S3FS {
 
     bool readS3Client(uint64_t offset, size_t n, char *buffer,
                       StringContainer *result) {
-        std::cout << "ReadFilefromS3 s3://" << this->bucket_name_ << "/"
-                  << this->object_name_ << " from " << offset << " for n:" << n;
+        std::cout << "Read File from S3 s3://" << this->bucket_name_ << "/"
+                  << this->object_name_ << " from " << offset << " for n:" << n
+                  << std::endl;
 
         Aws::S3::Model::GetObjectRequest getObjectRequest;
 
@@ -291,55 +294,65 @@ S3Init::initializeTransferManager() {
 void S3Init::s3_read(const std::string &file_url, std::string *result,
                      bool use_tm) {
     std::string bucket, object;
-    uint64_t offset = 0;
-    uint64_t result_size = 0;
-
     parseS3Path(file_url, &bucket, &object);
-    S3FS s3handler(bucket, object, use_tm, initializeTransferManager(),
-                   initializeS3Client());
+
+    // existence already checked in `get_file_size()`.
+    // if (!this->file_exists(file_url, bucket, object)) {
+    //     throw std::invalid_argument{"The specified file doesn't exist."};
+    // }
 
     std::unique_ptr<char[]> buffer(new char[bufferSize]);
     std::stringstream ss;
-
-    if (!this->file_exists(file_url, bucket, object)) {
-        throw std::invalid_argument{"The specified file doesn't exist."};
+    std::vector<std::string> filenames;
+    this->get_files(bucket, object, &filenames);
+    if (filenames.empty()) {
+        filenames.push_back("");
     }
-    uint64_t file_size = this->get_file_size(file_url, bucket, object);
-    std::size_t part_count = (std::max)(
-        static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
-        static_cast<std::size_t>(1));
-    result->resize(file_size);
+    for (filename : filenames) {
+        filename = object + filename;
+        std::cerr << filename << std::endl;
 
-    for (int i = 0; i < part_count; i++) {
-        offset = i * bufferSize;
-        StringContainer read_chunk;
-        bool flag =
-            s3handler.read(offset, bufferSize, buffer.get(), &read_chunk);
+        S3FS s3handler(bucket, filename, use_tm, initializeTransferManager(),
+                       initializeS3Client());
 
-        if (read_chunk.size() != 0) {
-            ss.write(read_chunk.data(), read_chunk.size());
-            result_size += read_chunk.size();
+        uint64_t offset = 0;
+        uint64_t result_size = 0;
+        uint64_t file_size = this->get_file_size(bucket, filename);
+        std::size_t part_count = (std::max)(
+            static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
+            static_cast<std::size_t>(1));
+        result->resize(file_size);
+
+        for (int i = 0; i < part_count; i++) {
+            offset = i * bufferSize;
+            StringContainer read_chunk;
+            bool flag =
+                s3handler.read(offset, bufferSize, buffer.get(), &read_chunk);
+
+            if (read_chunk.size() != 0) {
+                ss.write(read_chunk.data(), read_chunk.size());
+                result_size += read_chunk.size();
+            }
+            if (result_size == file_size) {
+                break;
+            }
+            if (read_chunk.size() != bufferSize) {
+                std::cout << "Result size and buffer size did not match"
+                          << std::endl;
+                break;
+            }
         }
-        if (result_size == file_size) {
-            break;
-        }
-        if (read_chunk.size() != bufferSize) {
-            std::cout << "Result size and buffer size did not match";
-            break;
-        }
+        memcpy((char *)(result->data()), ss.str().data(),
+               static_cast<size_t>(file_size));
     }
-
-    memcpy((char *)(result->data()), ss.str().data(),
-           static_cast<size_t>(file_size));
 }
 
-bool S3Init::file_exists(const std::string &file_url, const std::string &bucket,
-                         const std::string &object) {
+bool S3Init::file_exists(const std::string &bucket, const std::string &object) {
     Aws::S3::Model::HeadObjectRequest headObjectRequest;
     headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
-    headObjectRequest.SetResponseStreamFactory([]() {
-        return Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
-    });
+    // headObjectRequest.SetResponseStreamFactory([]() {
+    //     return Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
+    // });
     auto headObjectOutcome =
         this->initializeS3Client()->HeadObject(headObjectRequest);
     if (headObjectOutcome.IsSuccess()) {
@@ -348,15 +361,14 @@ bool S3Init::file_exists(const std::string &file_url, const std::string &bucket,
     return false;
 }
 
-uint64_t S3Init::get_file_size(const std::string &file_url,
-                               const std::string &bucket,
+uint64_t S3Init::get_file_size(const std::string &bucket,
                                const std::string &object) {
     // Assume the bucket and object both exist
     Aws::S3::Model::HeadObjectRequest headObjectRequest;
     headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
-    headObjectRequest.SetResponseStreamFactory([]() {
-        return Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
-    });
+    // headObjectRequest.SetResponseStreamFactory([]() {
+    //     return Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
+    // });
     auto headObjectOutcome =
         this->initializeS3Client()->HeadObject(headObjectRequest);
     if (headObjectOutcome.IsSuccess()) {
@@ -364,6 +376,31 @@ uint64_t S3Init::get_file_size(const std::string &file_url,
     }
     throw std::invalid_argument{"The specified file doesn't exist."};
     return 0;
+}
+
+void S3Init::get_files(const std::string &bucket, const std::string &prefix,
+                       std::vector<std::string> *filenames) {
+    Aws::S3::Model::ListObjectsRequest request;
+    request.WithBucket(bucket.c_str())
+        .WithPrefix(prefix.c_str())
+        .WithDelimiter("/");
+    // Aws::S3::Model::ListObjectsResult result;
+    auto outcome = this->initializeS3Client()->ListObjects(request);
+    if (!outcome.IsSuccess()) {
+        throw std::invalid_argument{
+            "The specified bucket/folder doesn't exist."};
+    }
+
+    auto result = outcome.GetResult();
+    for (const auto &object : result.GetContents()) {
+        Aws::String key = object.GetKey();
+        Aws::String entry = key.substr(prefix.length());
+        if (entry.length() > 0) {
+            filenames->push_back(entry.c_str());
+        }
+    }
+
+    return;
 }
 
 }  // namespace awsio
