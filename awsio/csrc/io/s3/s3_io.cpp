@@ -27,10 +27,10 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 
-static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
-
 namespace awsio {
 namespace {
+static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
+static const size_t s3ReadBufferSize = 16 * 1024 * 1024;               // 16 MB
 static const uint64_t s3MultiPartDownloadChunkSize = 2 * 1024 * 1024;  // 50 MB
 static const int downloadRetries = 3;
 static const int64_t s3TimeoutMsec = 300000;
@@ -231,7 +231,14 @@ class S3FS {
 S3Init::S3Init()
     : s3_client_(nullptr, ShutdownClient),
       transfer_manager_(nullptr, ShutdownTransferManager),
-      initialization_lock_() {}
+      initialization_lock_() {
+    // Load reading parameters
+    bufferSize = s3ReadBufferSize;
+    const char *bufferSizeStr = getenv("S3_BUFFER_SIZE");
+    if (bufferSizeStr) {
+        bufferSize = std::stoull(bufferSizeStr);
+    }
+}
 
 S3Init::~S3Init() {}
 
@@ -286,13 +293,13 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     std::string bucket, object;
     uint64_t offset = 0;
     uint64_t result_size = 0;
-    static const size_t bufferSize = 16 * 1024 * 1024;
-    std::unique_ptr<char[]> buffer(new char[bufferSize]);
-    std::stringstream ss;
 
     parseS3Path(file_url, &bucket, &object);
     S3FS s3handler(bucket, object, use_tm, initializeTransferManager(),
                    initializeS3Client());
+
+    std::unique_ptr<char[]> buffer(new char[bufferSize]);
+    std::stringstream ss;
 
     if (!this->file_exists(file_url, bucket, object)) {
         throw std::invalid_argument{"The specified file doesn't exist."};
