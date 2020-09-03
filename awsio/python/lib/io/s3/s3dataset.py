@@ -1,7 +1,9 @@
 import os
 import torch
 import tarfile
+import io
 import zipfile
+from zipfile import ZipFile
 import re
 from torch.utils.data import IterableDataset
 import _pywrap_s3_io
@@ -17,7 +19,7 @@ def tardata(fileobj, skip_meta=r"__[^/]*__($|/)", handler=reraise_exception):
     """Iterator yielding filename, content pairs for the given tar stream.
     """
     try:
-        stream = tarfile.open(fileobj=fileobj, mode="r|*")
+        stream = tarfile.open(fileobj=io.BytesIO(fileobj), mode="r|*")
         for tarinfo in stream:
             try:
                 if not tarinfo.isreg():
@@ -47,16 +49,20 @@ def tardata(fileobj, skip_meta=r"__[^/]*__($|/)", handler=reraise_exception):
 
 
 def zipdata(fileobj, handler=reraise_exception):
-    """Iterator yielding filename, content pairs for the given tar stream.
+    """Iterator yielding filename, content pairs for the given zip stream.
     """
-    with zipfile.ZipFile(fileobj, 'r') as zfile:
-        files = []
-        for file_ in zfile.namelist():
-            zfile.extract(file_)
-    files = [f for f in files if os.path.isfile(f)]
-    return files
+    try:
+        with zipfile.ZipFile(io.BytesIO(fileobj), 'r') as zfile:
+            try:
+                for file_ in zfile.namelist():
+                    data = zfile.read(file_)
+                    yield file_, data
+            except Exception as exn:
+                print("Error:", exn)
+    except Exception as exn:
+        print("Error:", exn)
 
-# [TODO]
+            
 class S3Dataset(IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
@@ -71,17 +77,10 @@ class S3Dataset(IterableDataset):
         else:
             self.data=data
 
-    def __len__(self):
-        """Return the nominal length of the dataset."""
-        return len(self.data)
-
     def __iter__(self):
-        data = self.shard_fn(self.data)
-        return self.samples(data)
+       # data = self.shard_fn(self.data)
+        return iter(self.data)
 
-# [TODO] Implement sharding
-    def shard_fn(self):
-        pass
 
 
 
