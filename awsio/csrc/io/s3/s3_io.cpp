@@ -70,7 +70,13 @@ Aws::Client::ClientConfiguration &setUpS3Config() {
             cfg.verifySSL = true;
         }
     }
-    cfg.region = "us-west-2";
+
+    const char *region = getenv("AWS_REGION");
+    if (region) {
+        cfg.region = region;
+    } else {
+        cfg.region = "us-west-2";
+    }
     return cfg;
 }
 
