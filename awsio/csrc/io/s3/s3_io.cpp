@@ -399,8 +399,6 @@ void S3Init::get_files(const std::string &bucket, const std::string &prefix,
             filenames->push_back(entry.c_str());
         }
     }
-
-    return;
 }
 
 }  // namespace awsio
