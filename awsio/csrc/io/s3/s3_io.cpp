@@ -310,50 +310,39 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
 
     std::unique_ptr<char[]> buffer(new char[bufferSize]);
     std::stringstream ss;
-    std::vector<std::string> filenames;
-    this->get_files(bucket, object, &filenames);
-    if (filenames.empty()) {
-        filenames.push_back("");
-    }
-    for (filename : filenames) {
-        filename = object + filename;
 
-        S3FS s3handler(bucket, filename, use_tm, initializeTransferManager(),
-                       initializeS3Client());
+    S3FS s3handler(bucket, object, use_tm, initializeTransferManager(),
+                   initializeS3Client());
 
-        uint64_t offset = 0;
-        uint64_t result_size = 0;
-        uint64_t file_size = this->get_file_size(bucket, filename);
-        std::size_t part_count = (std::max)(
-            static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
-            static_cast<std::size_t>(1));
-        result->resize(file_size);
+    uint64_t offset = 0;
+    uint64_t result_size = 0;
+    uint64_t file_size = this->get_file_size(file_url, bucket, object);
+    std::size_t part_count = (std::max)(
+        static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
+        static_cast<std::size_t>(1));
+    result->resize(file_size);
 
-        for (int i = 0; i < part_count; i++) {
-            offset = i * bufferSize;
-            StringContainer read_chunk;
-            bool flag =
-                s3handler.read(offset, bufferSize, buffer.get(), &read_chunk);
+    for (int i = 0; i < part_count; i++) {
+        offset = i * bufferSize;
+        StringContainer read_chunk;
+        bool flag =
+            s3handler.read(offset, bufferSize, buffer.get(), &read_chunk);
 
-            if (read_chunk.size() != 0) {
-                ss.write(read_chunk.data(), read_chunk.size());
-                result_size += read_chunk.size();
-            }
-            if (result_size == file_size) {
-                break;
-            }
-            if (read_chunk.size() != bufferSize) {
-                std::cout << "Result size and buffer size did not match"
-                          << std::endl;
-                break;
-            }
+        if (read_chunk.size() != 0) {
+            ss.write(read_chunk.data(), read_chunk.size());
+            result_size += read_chunk.size();
         }
-        memcpy((char *)(result->data()), ss.str().data(),
-               static_cast<size_t>(file_size));
-    }
+        if (result_size == file_size) {
+            break;
+        }
+        if (read_chunk.size() != bufferSize) {
+            std::cout << "Result size and buffer size did not match";
+            break;
+    memcpy((char *)(result->data()), ss.str().data(),
+           static_cast<size_t>(file_size));
 }
 
-bool S3Init::file_exists(const std::string &bucket, const std::string &object) {
+bool S3Init::list_files(const std::string &bucket, const std::string &object) {
     Aws::S3::Model::HeadObjectRequest headObjectRequest;
     headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
     // headObjectRequest.SetResponseStreamFactory([]() {
