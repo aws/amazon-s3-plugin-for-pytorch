@@ -304,7 +304,7 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     parseS3Path(file_url, &bucket, &object);
 
     // existence already checked in `get_file_size()`.
-    // if (!this->file_exists(file_url, bucket, object)) {
+    // if (!this->file_exists(bucket, object)) {
     //     throw std::invalid_argument{"The specified file doesn't exist."};
     // }
 
@@ -316,7 +316,7 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
 
     uint64_t offset = 0;
     uint64_t result_size = 0;
-    uint64_t file_size = this->get_file_size(file_url, bucket, object);
+    uint64_t file_size = this->get_file_size(bucket, object);
     std::size_t part_count = (std::max)(
         static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
         static_cast<std::size_t>(1));
