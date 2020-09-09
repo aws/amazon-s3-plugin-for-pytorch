@@ -317,7 +317,6 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     }
     for (filename : filenames) {
         filename = object + filename;
-        std::cerr << filename << std::endl;
 
         S3FS s3handler(bucket, filename, use_tm, initializeTransferManager(),
                        initializeS3Client());
