@@ -30,12 +30,13 @@
 
 namespace awsio {
 namespace {
-static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
+// static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
 static const size_t s3ReadBufferSize = 16 * 1024 * 1024;               // 16 MB
 static const uint64_t s3MultiPartDownloadChunkSize = 2 * 1024 * 1024;  // 50 MB
 static const int downloadRetries = 3;
 static const int64_t s3TimeoutMsec = 300000;
 static const int executorPoolSize = 25;
+static const int S3GetFilesMaxKeys = 100;
 
 Aws::Client::ClientConfiguration &setUpS3Config() {
     static Aws::Client::ClientConfiguration cfg;
@@ -316,7 +317,6 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     }
     for (filename : filenames) {
         filename = object + filename;
-        std::cerr << filename << std::endl;
 
         S3FS s3handler(bucket, filename, use_tm, initializeTransferManager(),
                        initializeS3Client());
@@ -389,22 +389,27 @@ void S3Init::get_files(const std::string &bucket, const std::string &prefix,
     Aws::S3::Model::ListObjectsRequest request;
     request.WithBucket(bucket.c_str())
         .WithPrefix(prefix.c_str())
+        .WithMaxKeys(S3GetFilesMaxKeys)
         .WithDelimiter("/");
-    // Aws::S3::Model::ListObjectsResult result;
-    auto outcome = this->initializeS3Client()->ListObjects(request);
-    if (!outcome.IsSuccess()) {
-        throw std::invalid_argument{
-            "The specified bucket/folder doesn't exist."};
-    }
 
-    auto result = outcome.GetResult();
-    for (const auto &object : result.GetContents()) {
-        Aws::String key = object.GetKey();
-        Aws::String entry = key.substr(prefix.length());
-        if (entry.length() > 0) {
-            filenames->push_back(entry.c_str());
+    Aws::S3::Model::ListObjectsResult result;
+    do {
+        auto outcome = this->initializeS3Client()->ListObjects(request);
+        if (!outcome.IsSuccess()) {
+            throw std::invalid_argument{
+                "The specified bucket/folder doesn't exist."};
         }
-    }
+
+        result = outcome.GetResult();
+        for (const auto &object : result.GetContents()) {
+            Aws::String key = object.GetKey();
+            Aws::String entry = key.substr(prefix.length());
+            if (entry.length() > 0) {
+                filenames->push_back(entry.c_str());
+            }
+        }
+        request.SetMarker(result.GetNextMarker());
+    } while (result.GetIsTruncated());
 }
 
 }  // namespace awsio
