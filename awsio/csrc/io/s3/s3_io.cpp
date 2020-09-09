@@ -341,70 +341,67 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
             memcpy((char *)(result->data()), ss.str().data(),
                    static_cast<size_t>(file_size));
         }
+    }
+}
+bool S3Init::file_exists(const std::string &bucket, const std::string &object) {
+    Aws::S3::Model::HeadObjectRequest headObjectRequest;
+    headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
+    // headObjectRequest.SetResponseStreamFactory([]() {
+    //     return
+    //     Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
+    // });
+    auto headObjectOutcome =
+        this->initializeS3Client()->HeadObject(headObjectRequest);
+    if (headObjectOutcome.IsSuccess()) {
+        return true;
+    }
+    return false;
+}
 
-        bool S3Init::file_exists(const std::string &bucket,
-                                 const std::string &object) {
-            Aws::S3::Model::HeadObjectRequest headObjectRequest;
-            headObjectRequest.WithBucket(bucket.c_str())
-                .WithKey(object.c_str());
-            // headObjectRequest.SetResponseStreamFactory([]() {
-            //     return
-            //     Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
-            // });
-            auto headObjectOutcome =
-                this->initializeS3Client()->HeadObject(headObjectRequest);
-            if (headObjectOutcome.IsSuccess()) {
-                return true;
+uint64_t S3Init::get_file_size(const std::string &bucket,
+                               const std::string &object) {
+    // Assume the bucket and object both exist
+    Aws::S3::Model::HeadObjectRequest headObjectRequest;
+    headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
+    // headObjectRequest.SetResponseStreamFactory([]() {
+    //     return
+    //     Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
+    // });
+    auto headObjectOutcome =
+        this->initializeS3Client()->HeadObject(headObjectRequest);
+    if (headObjectOutcome.IsSuccess()) {
+        return headObjectOutcome.GetResult().GetContentLength();
+    }
+    throw std::invalid_argument{"The specified file doesn't exist."};
+    return 0;
+}
+
+void S3Init::list_files(const std::string &bucket, const std::string &prefix,
+                        std::vector<std::string> *filenames) {
+    Aws::S3::Model::ListObjectsRequest request;
+    request.WithBucket(bucket.c_str())
+        .WithPrefix(prefix.c_str())
+        .WithMaxKeys(S3GetFilesMaxKeys)
+        .WithDelimiter("/");
+
+    Aws::S3::Model::ListObjectsResult result;
+    do {
+        auto outcome = this->initializeS3Client()->ListObjects(request);
+        if (!outcome.IsSuccess()) {
+            throw std::invalid_argument{
+                "The specified bucket/folder doesn't exist."};
+        }
+
+        result = outcome.GetResult();
+        for (const auto &object : result.GetContents()) {
+            Aws::String key = object.GetKey();
+            Aws::String entry = key.substr(prefix.length());
+            if (entry.length() > 0) {
+                filenames->push_back(entry.c_str());
             }
-            return false;
         }
+        request.SetMarker(result.GetNextMarker());
+    } while (result.GetIsTruncated());
+}
 
-        uint64_t S3Init::get_file_size(const std::string &bucket,
-                                       const std::string &object) {
-            // Assume the bucket and object both exist
-            Aws::S3::Model::HeadObjectRequest headObjectRequest;
-            headObjectRequest.WithBucket(bucket.c_str())
-                .WithKey(object.c_str());
-            // headObjectRequest.SetResponseStreamFactory([]() {
-            //     return
-            //     Aws::New<Aws::StringStream>(kS3FileSystemAllocationTag);
-            // });
-            auto headObjectOutcome =
-                this->initializeS3Client()->HeadObject(headObjectRequest);
-            if (headObjectOutcome.IsSuccess()) {
-                return headObjectOutcome.GetResult().GetContentLength();
-            }
-            throw std::invalid_argument{"The specified file doesn't exist."};
-            return 0;
-        }
-
-        void S3Init::list_files(const std::string &bucket,
-                                const std::string &prefix,
-                                std::vector<std::string> *filenames) {
-            Aws::S3::Model::ListObjectsRequest request;
-            request.WithBucket(bucket.c_str())
-                .WithPrefix(prefix.c_str())
-                .WithMaxKeys(S3GetFilesMaxKeys)
-                .WithDelimiter("/");
-
-            Aws::S3::Model::ListObjectsResult result;
-            do {
-                auto outcome = this->initializeS3Client()->ListObjects(request);
-                if (!outcome.IsSuccess()) {
-                    throw std::invalid_argument{
-                        "The specified bucket/folder doesn't exist."};
-                }
-
-                result = outcome.GetResult();
-                for (const auto &object : result.GetContents()) {
-                    Aws::String key = object.GetKey();
-                    Aws::String entry = key.substr(prefix.length());
-                    if (entry.length() > 0) {
-                        filenames->push_back(entry.c_str());
-                    }
-                }
-                request.SetMarker(result.GetNextMarker());
-            } while (result.GetIsTruncated());
-        }
-
-    }  // namespace awsio
+}  // namespace awsio
