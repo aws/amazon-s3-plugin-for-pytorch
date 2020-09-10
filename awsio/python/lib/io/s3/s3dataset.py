@@ -55,7 +55,6 @@ def zipdata(fileobj, handler=reraise_exception):
     """
     try:
         with zipfile.ZipFile(io.BytesIO(fileobj), 'r') as zfile:
-            print(zfile.namelist())
             try:
                 for file_ in zfile.namelist():
                     data = zfile.read(file_)
