@@ -7,6 +7,8 @@ from zipfile import ZipFile
 import re
 from torch.utils.data import IterableDataset
 import _pywrap_s3_io
+import random
+from itertools import chain, cycle
 
 meta_prefix = "__"
 meta_suffix = "__"
@@ -62,25 +64,49 @@ def zipdata(fileobj, handler=reraise_exception):
     except Exception as exn:
         print("Error:", exn)
 
-            
+
+def list_files(bucket, prefix):
+    """Returns a list of entries contained within a directory.
+    """
+    handler = _pywrap_s3_io.S3Init()
+    return [
+        's3://'+bucket+'/'+prefix+filename
+        for filename in handler.list_files(bucket, prefix)
+    ]
+
+
 class S3Dataset(IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
-    def __init__(self, url, compression=None, transforms=None):
+    def __init__(self, urls_list, batch_size=1, compression=None):
+        self.urls_list = [urls_list] if isinstance(urls_list, str) else urls_list
+        self.batch_size = batch_size
         self.handler = _pywrap_s3_io.S3Init()
-        data = self.handler.s3_read(url, False)
-        if compression=="tar":
-            self.data = tardata(data)
-        elif compression=="zip":
-            self.data = zipdata(data)
+    
+    @property
+    def shuffled_list(self):
+        return random.sample(self.urls_list, len(self.urls_list))
+
+    def download_data(self, filename):
+        if filename[-3:] =="tar":
+            tarfile = tardata(self.handler.s3_read(filename, True))
+            for fname, content in tarfile:
+                yield fname, content
+        elif filename[-3:] =="zip":
+            zipfile = zipdata(self.handler.s3_read(filename, True))
+            for fname, content in zipfile:
+                yield fname, content
         else:
-            self.data=data
+            yield self.handler.s3_read(filename, True)
+
+    def get_stream(self, urls_list):
+        return chain.from_iterable(map(self.download_data, urls_list))
+
+    def get_by_batches(self):
+        return zip(*[self.get_stream(self.shuffled_list)
+                     for _ in range(self.batch_size)])
 
     def __iter__(self):
-       # data = self.shard_fn(self.data)
-        return iter(self.data)
-
-
-
+            return self.get_by_batches()
 
