@@ -4,7 +4,7 @@ import sys
 import platform
 import subprocess
 
-from setuptools import setup, Extension
+from setuptools import setup, Extension, find_packages 
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
 
@@ -62,7 +62,7 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
 setup(
-    name='cmake_aws_io',
+    name='awsio',
     version='0.0.1',
     author='Roshani Nagmote',
     author_email='roshaninagmote2@gmail.com',
@@ -70,5 +70,6 @@ setup(
     long_description='',
     ext_modules=[CMakeExtension('aws_io')],
     cmdclass=dict(build_ext=CMakeBuild),
+    packages=find_packages(exclude=('tests',)),
     zip_safe=False,
 )
