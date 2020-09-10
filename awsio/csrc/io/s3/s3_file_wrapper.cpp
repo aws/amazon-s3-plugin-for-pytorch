@@ -20,6 +20,13 @@ namespace {
 		    std::string result;
 		    self->s3_read(file_url, &result,  use_tm);
 		    return py::bytes(result);
-                });
+                })
+                .def("list_files",
+                [](S3Init* self, const std::string &bucket, const std::string &prefix){
+            std::vector<std::string> filenames;
+            self->list_files(bucket, prefix, &filenames);
+            return filenames;
+
+        });
     }
 }

@@ -1,11 +1,21 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import _pywrap_s3_io
 from s3dataset import S3Dataset
+from s3dataset import list_files
+import sys
 
-dataset = S3Dataset('s3://roshanin-test-data/tinyimagenet.tar', compression="tar")
+#filenames = list_files('ydaiming-test-data2','test_0/test')
+#print(filenames)
+#f = 's3://ydaiming-test-data2/test_0/test_9970.JPEG'
+#f = 's3://roshanin-test-data/tinyimagenet.tar'
+f = ['s3://roshanin-test-data/tiny-imagenet-200.zip']
+dataset = S3Dataset(f, compression="zip")
+#dataset = S3Dataset('s3://roshanin-test-data/tinyimagenet.tar', compression="tar")
 #dataset = S3Dataset('s3://roshanin-test-data/tiny-imagenet-200.zip', compression="zip")
-#print('Sample snippet: ', dataset[442:475])
-for f, content  in dataset:
-        print(f, content)
+#loader = DataLoader(dataset, batch_size=1)
+#print(dataset)
+for f, content in dataset:
+    print(f)
+#    print(f,content)
        
