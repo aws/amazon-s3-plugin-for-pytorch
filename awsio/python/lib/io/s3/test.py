@@ -5,7 +5,7 @@ from s3dataset import S3Dataset
 from s3dataset import list_files
 import sys
 
-filenames = list_files('s3://ydaiming-test-data2/test_0/test')
+filenames = list_files('s3://ydaiming-test-data2/test_0.JPEG')
 print(filenames)
 #f = 's3://ydaiming-test-data2/test_0/test_9970.JPEG'
 #f = ['s3://roshanin-test-data/tinyimagenet.tar']

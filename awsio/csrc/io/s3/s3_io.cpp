@@ -398,6 +398,10 @@ void S3Init::list_files(const std::string &file_url,
         }
         request.SetMarker(result.GetNextMarker());
     } while (result.GetIsTruncated());
+
+    if (filenames->empty() && this->file_exists(bucket, prefix)) {
+        filenames->push_back("");
+    }
 }
 
 }  // namespace awsio
