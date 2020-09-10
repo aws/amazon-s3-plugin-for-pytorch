@@ -38,13 +38,6 @@ class S3Init {
     std::shared_ptr<Aws::Transfer::TransferManager> transfer_manager_;
     size_t bufferSize;
 
-    bool file_exists(const std::string &bucket,
-                     const std::string &object);
-    uint64_t get_file_size(const std::string &bucket,
-                           const std::string &object);
-    void get_files(const std::string &bucket, const std::string &prefix,
-                   std::vector<std::string> *filenames);
-
    public:
     S3Init();
 
@@ -58,6 +51,12 @@ class S3Init {
     std::shared_ptr<Aws::Transfer::TransferManager> initializeTransferManager();
 
     void s3_read(const std::string &file_url, std::string *result, bool use_tm);
+
+    bool file_exists(const std::string &bucket, const std::string &object);
+    uint64_t get_file_size(const std::string &bucket,
+                           const std::string &object);
+    void list_files(const std::string &bucket, const std::string &prefix,
+                    std::vector<std::string> *filenames);
 };
 }  // namespace awsio
 
