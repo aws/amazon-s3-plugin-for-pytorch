@@ -53,7 +53,6 @@ def tardata(fileobj, skip_meta=r"__[^/]*__($|/)", handler=reraise_exception):
 def zipdata(fileobj, handler=reraise_exception):
     """Iterator yielding filename, content pairs for the given zip stream.
     """
-    print(fileobj)
     try:
         with zipfile.ZipFile(io.BytesIO(fileobj), 'r') as zfile:
             print(zfile.namelist())
@@ -85,30 +84,21 @@ class S3Dataset(IterableDataset):
         self.urls_list = [urls_list] if isinstance(urls_list, str) else urls_list
         self.batch_size = batch_size
         self.handler = _pywrap_s3_io.S3Init()
-        self.compression = compression
-        if compression=="tar":
-            print(self.urls_list[0])
-            data = self.handler.s3_read(self.urls_list[0], False)
-            self.data = tardata(data)
-        elif compression=="zip":
-            print(urls_list[0])
-            data = self.handler.s3_read(urls_list[0], False)
-            self.data = zipdata(data)
     
     @property
     def shuffled_list(self):
         return random.sample(self.urls_list, len(self.urls_list))
 
     def download_data(self, filename):
-     #   if filename[-3:] =="tar":
-      #      data = self.handler.s3_read(filename, True)
-            
-       #     tar_files = tardata(data)
-        #    return tar_files
-    #    elif filename[-3:] =="zip":
-     #       yield zipdata(self.handler.s3_read(filename, True))
-      #  else:
-       #     print(filename)
+        if filename[-3:] =="tar":
+            tarfile = tardata(self.handler.s3_read(filename, True))
+            for fname, content in tarfile:
+                yield fname, content
+        elif filename[-3:] =="zip":
+            zipfile = zipdata(self.handler.s3_read(filename, True))
+            for fname, content in zipfile:
+                yield fname, content
+        else:
             yield self.handler.s3_read(filename, True)
 
     def get_stream(self, urls_list):
@@ -119,9 +109,5 @@ class S3Dataset(IterableDataset):
                      for _ in range(self.batch_size)])
 
     def __iter__(self):
-        if self.compression == "tar" or self.compression == "zip":
-            print("in iterrrrr")
-            return iter(self.data)
-        else:
             return self.get_by_batches()
 
