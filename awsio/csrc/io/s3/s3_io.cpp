@@ -373,6 +373,10 @@ void S3Init::list_files(const std::string &file_url,
                         std::vector<std::string> *filenames) {
     std::string bucket, prefix;
     parseS3Path(file_url, &bucket, &prefix);
+    Aws::String default_key = "";
+    if (prefix.empty()) {
+        default_key = "/";
+    }
 
     Aws::S3::Model::ListObjectsRequest request;
     request.WithBucket(bucket.c_str())
@@ -390,18 +394,14 @@ void S3Init::list_files(const std::string &file_url,
 
         result = outcome.GetResult();
         for (const auto &object : result.GetContents()) {
-            Aws::String key = object.GetKey();
+            Aws::String key = default_key + object.GetKey();
             Aws::String entry = key.substr(prefix.length());
-            if (entry.length() > 0) {
+            if (entry.length() >= 0) {
                 filenames->push_back(entry.c_str());
             }
         }
         request.SetMarker(result.GetNextMarker());
     } while (result.GetIsTruncated());
-
-    if (filenames->empty() && this->file_exists(bucket, prefix)) {
-        filenames->push_back("");
-    }
 }
 
 }  // namespace awsio

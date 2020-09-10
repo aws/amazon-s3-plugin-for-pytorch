@@ -76,8 +76,7 @@ class S3Dataset(IterableDataset):
     It handles some bookkeeping related to DataLoader.
     """
     def __init__(self, urls_list, batch_size=1, compression=None):
-        self.urls_list = [urls_list] if isinstance(urls_list,
-                                                   str) else urls_list
+        self.urls_list = urls_list
         self.batch_size = batch_size
         self.handler = _pywrap_s3_io.S3Init()
 
