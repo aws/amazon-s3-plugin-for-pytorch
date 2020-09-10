@@ -55,7 +55,7 @@ class S3Init {
     bool file_exists(const std::string &bucket, const std::string &object);
     uint64_t get_file_size(const std::string &bucket,
                            const std::string &object);
-    void list_files(const std::string &bucket, const std::string &prefix,
+    void list_files(const std::string &file_url,
                     std::vector<std::string> *filenames);
 };
 }  // namespace awsio

@@ -5,7 +5,7 @@ from s3dataset import S3Dataset
 from s3dataset import list_files
 import sys
 
-filenames = list_files('ydaiming-test-data2','test_0/test')
+filenames = list_files('s3://ydaiming-test-data2/test_0/test')
 print(filenames)
 #f = 's3://ydaiming-test-data2/test_0/test_9970.JPEG'
 #f = ['s3://roshanin-test-data/tinyimagenet.tar']
@@ -18,4 +18,4 @@ dataset = S3Dataset(filenames)
 for f1 in dataset:
     print(f1)
 #    print(f,content)
-       
+print('[Dataset Length]:', len(dataset))

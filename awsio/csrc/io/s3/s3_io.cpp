@@ -302,18 +302,11 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
                      bool use_tm) {
     std::string bucket, object;
     parseS3Path(file_url, &bucket, &object);
-
-    // existence already checked in `get_file_size()`.
-    // if (!this->file_exists(bucket, object)) {
-    //     throw std::invalid_argument{"The specified file doesn't exist."};
-    // }
-
-    std::unique_ptr<char[]> buffer(new char[bufferSize]);
-    std::stringstream ss;
-
     S3FS s3handler(bucket, object, use_tm, initializeTransferManager(),
                    initializeS3Client());
 
+    std::unique_ptr<char[]> buffer(new char[bufferSize]);
+    std::stringstream ss;
     uint64_t offset = 0;
     uint64_t result_size = 0;
     uint64_t file_size = this->get_file_size(bucket, object);
@@ -376,8 +369,11 @@ uint64_t S3Init::get_file_size(const std::string &bucket,
     return 0;
 }
 
-void S3Init::list_files(const std::string &bucket, const std::string &prefix,
+void S3Init::list_files(const std::string &file_url,
                         std::vector<std::string> *filenames) {
+    std::string bucket, prefix;
+    parseS3Path(file_url, &bucket, &prefix);
+
     Aws::S3::Model::ListObjectsRequest request;
     request.WithBucket(bucket.c_str())
         .WithPrefix(prefix.c_str())
