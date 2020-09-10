@@ -343,7 +343,6 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
     memcpy((char *)(result->data()), ss.str().data(),
            static_cast<size_t>(file_size));
 }
-
 bool S3Init::file_exists(const std::string &bucket, const std::string &object) {
     Aws::S3::Model::HeadObjectRequest headObjectRequest;
     headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
