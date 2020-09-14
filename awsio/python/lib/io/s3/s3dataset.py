@@ -64,6 +64,12 @@ def zipdata(fileobj, handler=reraise_exception):
         print("Error:", exn)
 
 
+def file_exists(bucket_name, object_name):
+    """Return if file exists or not"""
+    handler = _pywrap_s3_io.S3Init()
+    return handler.file_exists(bucket_name, object_name)
+
+
 def list_files(url):
     """Returns a list of entries contained within a directory.
     """
