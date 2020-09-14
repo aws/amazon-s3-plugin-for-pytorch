@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import _pywrap_s3_io
 from s3dataset import S3Dataset
-from s3dataset import list_files
+from s3dataset import list_files, file_exists
 import sys
 
 filenames = list_files('s3://ydaiming-test-data2/test_0.JPEG')
