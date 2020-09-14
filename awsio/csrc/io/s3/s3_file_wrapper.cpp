@@ -23,13 +23,21 @@ PYBIND11_MODULE(_pywrap_s3_io, m) {
                  self->s3_read(file_url, &result, use_tm);
                  return py::bytes(result);
              })
-        .def("list_files", [](S3Init* self, const std::string& file_url) {
-            std::vector<std::string> filenames;
-            self->list_files(file_url, &filenames);
-            return filenames;
-        })
-        .def("file_exists", [](S3Init* self, const std::string& bucket, const std::string& object) {
-            return self->file_exists(bucket, object);
-    });
+        .def("list_files",
+             [](S3Init* self, const std::string& file_url) {
+                 std::vector<std::string> filenames;
+                 self->list_files(file_url, &filenames);
+                 return filenames;
+             })
+        .def("file_exists",
+             [](S3Init* self, const std::string& bucket,
+                const std::string& object) {
+                 return self->file_exists(bucket, object);
+             })
+        .def("get_file_size",
+             [](S3Init* self, const std::string& bucket,
+                const std::string& object) {
+                 return self->get_file_size(bucket, object);
+        });
 }
 }  // namespace

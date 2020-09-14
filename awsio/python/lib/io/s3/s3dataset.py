@@ -70,6 +70,12 @@ def file_exists(bucket_name, object_name):
     return handler.file_exists(bucket_name, object_name)
 
 
+def get_file_size(bucket_name, object_name):
+    """Return the file size of the specified file"""
+    handler = _pywrap_s3_io.S3Init()
+    return handler.get_file_size(bucket_name, object_name)
+
+
 def list_files(url):
     """Returns a list of entries contained within a directory.
     """
