@@ -7,18 +7,15 @@ import sys
 
 filenames = list_files('s3://ydaiming-test-data2/test_0.JPEG')
 print(filenames)
-
-va = file_exists('ydaiming-test-data2','testrrr.JPEG' )
-print(va)
 #f = 's3://ydaiming-test-data2/test_0/test_9970.JPEG'
 #f = ['s3://roshanin-test-data/tinyimagenet.tar']
 #f = ['s3://roshanin-test-data/tiny-imagenet-200.zip']
-#dataset = S3Dataset(filenames)
+dataset = S3Dataset(filenames)
 #dataset = S3Dataset('s3://roshanin-test-data/tinyimagenet.tar', compression="tar")
 #dataset = S3Dataset('s3://roshanin-test-data/tiny-imagenet-200.zip', compression="zip")
 #loader = DataLoader(dataset, batch_size=1)
 #print(dataset)
-#for f1 in dataset:
- #   print(f1)
+for f1 in dataset:
+    print(f1)
 #    print(f,content)
-#print('[Dataset Length]:', len(dataset))
+print('[Dataset Length]:', len(dataset))
