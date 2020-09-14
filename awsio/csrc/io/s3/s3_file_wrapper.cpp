@@ -27,6 +27,9 @@ PYBIND11_MODULE(_pywrap_s3_io, m) {
             std::vector<std::string> filenames;
             self->list_files(file_url, &filenames);
             return filenames;
-        });
+        })
+        .def("file_exists", [](S3Init* self, const std::string& bucket, const std::string& object) {
+            return self->file_exists(bucket, object);
+    });
 }
 }  // namespace
