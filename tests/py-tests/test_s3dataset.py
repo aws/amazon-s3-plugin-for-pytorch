@@ -46,6 +46,7 @@ def test_regions(region, s3_dataset_path, bucket_name, prefix):
     assert isinstance(result1, list)
     assert isinstance(result2, list)
     assert result1 == result2
+    del os.environ['AWS_REGION']
 
 
 def test_file_exists(bucket_name, object_name):
@@ -71,7 +72,6 @@ def test_get_file_size(bucket_name, object_name):
 test_list_files_prefix()
 test_list_files_bucket()
 test_regions('us-east-1', 's3://roshanin-dev/test/n', 'roshanin-dev', 'test/n')
-os.environ['AWS_REGION'] = 'us-west-2'
 test_file_exists('ydaiming-test-data2', 'test_0.JPEG')
 test_file_exists('ydaiming-test-data2', 'test_new_file.JPEG')
 test_file_exists('ydaiming-test-data2', 'folder_1')

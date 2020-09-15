@@ -99,15 +99,15 @@ class S3Dataset(IterableDataset):
 
     def download_data(self, filename):
         if filename[-3:] == "tar":
-            tarfile = tardata(self.handler.s3_read(filename, True))
+            tarfile = tardata(self.handler.s3_read(filename))
             for fname, content in tarfile:
                 yield fname, content
         elif filename[-3:] == "zip":
-            zipfile = zipdata(self.handler.s3_read(filename, True))
+            zipfile = zipdata(self.handler.s3_read(filename))
             for fname, content in zipfile:
                 yield fname, content
         else:
-            yield self.handler.s3_read(filename, True)
+            yield self.handler.s3_read(filename)
 
     def get_stream(self, urls_list):
         return chain.from_iterable(map(self.download_data, urls_list))

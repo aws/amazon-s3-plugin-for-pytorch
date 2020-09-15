@@ -243,10 +243,16 @@ S3Init::S3Init()
       transfer_manager_(nullptr, ShutdownTransferManager),
       initialization_lock_() {
     // Load reading parameters
-    bufferSize = s3ReadBufferSize;
+    buffer_size_ = s3ReadBufferSize;
     const char *bufferSizeStr = getenv("S3_BUFFER_SIZE");
     if (bufferSizeStr) {
-        bufferSize = std::stoull(bufferSizeStr);
+        buffer_size_ = std::stoull(bufferSizeStr);
+    }
+    const char *multi_download_str = getenv("S3_DISABLE_MULTI_PART_DOWNLOAD");
+    if (multi_download_str && multi_download_str == "ON") {
+        multi_part_download_ = true;
+    } else {
+        multi_part_download_ = false;
     }
 }
 
@@ -298,28 +304,27 @@ S3Init::initializeTransferManager() {
     return transfer_manager_;
 }
 
-void S3Init::s3_read(const std::string &file_url, std::string *result,
-                     bool use_tm) {
+void S3Init::s3_read(const std::string &file_url, std::string *result) {
     std::string bucket, object;
     parseS3Path(file_url, &bucket, &object);
-    S3FS s3handler(bucket, object, use_tm, initializeTransferManager(),
+    S3FS s3handler(bucket, object, multi_part_download_, initializeTransferManager(),
                    initializeS3Client());
 
-    std::unique_ptr<char[]> buffer(new char[bufferSize]);
+    std::unique_ptr<char[]> buffer(new char[buffer_size_]);
     std::stringstream ss;
     uint64_t offset = 0;
     uint64_t result_size = 0;
     uint64_t file_size = this->get_file_size(bucket, object);
     std::size_t part_count = (std::max)(
-        static_cast<size_t>((file_size + bufferSize - 1) / bufferSize),
+        static_cast<size_t>((file_size + buffer_size_ - 1) / buffer_size_),
         static_cast<std::size_t>(1));
     result->resize(file_size);
 
     for (int i = 0; i < part_count; i++) {
-        offset = i * bufferSize;
+        offset = i * buffer_size_;
         StringContainer read_chunk;
         bool flag =
-            s3handler.read(offset, bufferSize, buffer.get(), &read_chunk);
+            s3handler.read(offset, buffer_size_, buffer.get(), &read_chunk);
 
         if (read_chunk.size() != 0) {
             ss.write(read_chunk.data(), read_chunk.size());
@@ -328,7 +333,7 @@ void S3Init::s3_read(const std::string &file_url, std::string *result,
         if (result_size == file_size) {
             break;
         }
-        if (read_chunk.size() != bufferSize) {
+        if (read_chunk.size() != buffer_size_) {
             std::cout << "Result size and buffer size did not match";
             break;
         }
