@@ -18,9 +18,9 @@ PYBIND11_MODULE(_pywrap_s3_io, m) {
     py::class_<S3Init>(m, "S3Init")
         .def(py::init<>())
         .def("s3_read",
-             [](S3Init* self, const std::string& file_url, bool use_tm) {
+             [](S3Init* self, const std::string& file_url) {
                  std::string result;
-                 self->s3_read(file_url, &result, use_tm);
+                 self->s3_read(file_url, &result);
                  return py::bytes(result);
              })
         .def("list_files",
