@@ -248,11 +248,11 @@ S3Init::S3Init()
     if (bufferSizeStr) {
         buffer_size_ = std::stoull(bufferSizeStr);
     }
-    const char *multi_download_str = getenv("S3_DISABLE_MULTI_PART_DOWNLOAD");
-    if (multi_download_str && multi_download_str == "ON") {
-        multi_part_download_ = true;
-    } else {
+    const char *multi_download_disable_str = getenv("S3_DISABLE_MULTI_PART_DOWNLOAD");
+    if (multi_download_disable_str && multi_download_disable_str == "ON") {
         multi_part_download_ = false;
+    } else {
+        multi_part_download_ = true;
     }
 }
 
