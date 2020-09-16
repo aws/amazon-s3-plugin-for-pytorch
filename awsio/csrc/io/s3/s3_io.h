@@ -54,8 +54,7 @@ class S3Init {
     void s3_read(const std::string &file_url, std::string *result);
 
     bool file_exists(const std::string &file_url);
-    uint64_t get_file_size(const std::string &bucket,
-                           const std::string &object);
+    size_t get_file_size(const std::string &bucket, const std::string &object);
     void list_files(const std::string &file_url,
                     std::vector<std::string> *filenames);
 };

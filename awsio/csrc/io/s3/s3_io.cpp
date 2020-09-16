@@ -357,8 +357,8 @@ bool S3Init::file_exists(const std::string &file_url) {
     return false;
 }
 
-uint64_t S3Init::get_file_size(const std::string &bucket,
-                               const std::string &object) {
+size_t S3Init::get_file_size(const std::string &bucket,
+                             const std::string &object) {
     Aws::S3::Model::HeadObjectRequest headObjectRequest;
     headObjectRequest.WithBucket(bucket.c_str()).WithKey(object.c_str());
     auto headObjectOutcome =

@@ -74,7 +74,7 @@ def get_file_size(bucket_name, object_name):
 
 
 def list_files(url):
-    """Returns a list of entries contained within a directory.
+    """Returns a list of entries under the same prefix.
     """
     handler = _pywrap_s3_io.S3Init()
     return [url + filename for filename in handler.list_files(url)]
@@ -84,7 +84,7 @@ class S3Dataset(IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
-    def __init__(self, urls_list, batch_size=1, compression=None):
+    def __init__(self, urls_list, batch_size=1):
         urls = [urls_list] if isinstance(urls_list, str) else urls_list
         handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
