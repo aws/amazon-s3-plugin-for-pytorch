@@ -1,14 +1,11 @@
-import os
-import torch
 import tarfile
 import io
 import zipfile
-from zipfile import ZipFile
 import re
 from torch.utils.data import IterableDataset
 import _pywrap_s3_io
 import random
-from itertools import chain, cycle
+from itertools import chain
 
 meta_prefix = "__"
 meta_suffix = "__"
