@@ -64,10 +64,10 @@ def zipdata(fileobj, handler=reraise_exception):
         print("Error:", exn)
 
 
-def file_exists(bucket_name, object_name):
+def file_exists(url):
     """Return if file exists or not"""
     handler = _pywrap_s3_io.S3Init()
-    return handler.file_exists(bucket_name, object_name)
+    return handler.file_exists(url)
 
 
 def get_file_size(bucket_name, object_name):
@@ -88,8 +88,14 @@ class S3Dataset(IterableDataset):
     It handles some bookkeeping related to DataLoader.
     """
     def __init__(self, urls_list, batch_size=1, compression=None):
-        self.urls_list = [urls_list] if isinstance(urls_list,
-                                                   str) else urls_list
+        urls = [urls_list] if isinstance(urls_list, str) else urls_list
+        handler = _pywrap_s3_io.S3Init()
+        self.urls_list = list()
+        for url in urls:
+            if file_exists(url):
+                self.urls_list.extend(url)
+            else:
+                self.urls_list.extend(handler.list_files(url))
         self.batch_size = batch_size
         self.handler = _pywrap_s3_io.S3Init()
 

@@ -78,7 +78,7 @@ def test_disable_multi_download(s3_dataset_path, bucket_name, prefix):
 
 
 def test_file_exists(bucket_name, object_name):
-    result1 = file_exists(bucket_name, object_name)
+    result1 = file_exists('s3://' + bucket_name + '/' + object_name)
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(bucket_name)
     objs = list(bucket.objects.filter(Prefix=object_name))
