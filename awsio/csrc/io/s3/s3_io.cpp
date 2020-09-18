@@ -373,6 +373,12 @@ size_t S3Init::get_file_size(const std::string &bucket,
     return 0;
 }
 
+size_t S3Init::get_file_size(const std::string &file_url){
+    std::string bucket, object;
+    parseS3Path(file_url, &bucket, &object);
+    return this->get_file_size(bucket, object);
+}
+
 void S3Init::list_files(const std::string &file_url,
                         std::vector<std::string> *filenames) {
     std::string bucket, prefix;

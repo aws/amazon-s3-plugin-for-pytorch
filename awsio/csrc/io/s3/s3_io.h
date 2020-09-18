@@ -39,6 +39,8 @@ class S3Init {
     size_t buffer_size_;
     bool multi_part_download_;
 
+    size_t get_file_size(const std::string &bucket, const std::string &object);
+
    public:
     S3Init();
 
@@ -52,9 +54,8 @@ class S3Init {
     std::shared_ptr<Aws::Transfer::TransferManager> initializeTransferManager();
 
     void s3_read(const std::string &file_url, std::string *result);
-
+    size_t get_file_size(const std::string &file_url);
     bool file_exists(const std::string &file_url);
-    size_t get_file_size(const std::string &bucket, const std::string &object);
     void list_files(const std::string &file_url,
                     std::vector<std::string> *filenames);
 };

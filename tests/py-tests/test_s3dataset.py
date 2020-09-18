@@ -90,7 +90,7 @@ def test_file_exists(bucket_name, object_name):
 
 
 def test_get_file_size(bucket_name, object_name):
-    result1 = get_file_size(bucket_name, object_name)
+    result1 = get_file_size('s3://' + bucket_name + '/' + object_name)
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(bucket_name)
     result2 = bucket.Object(object_name).content_length

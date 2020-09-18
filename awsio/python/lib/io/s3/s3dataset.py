@@ -67,10 +67,10 @@ def file_exists(url):
     return handler.file_exists(url)
 
 
-def get_file_size(bucket_name, object_name):
+def get_file_size(url):
     """Return the file size of the specified file"""
     handler = _pywrap_s3_io.S3Init()
-    return handler.get_file_size(bucket_name, object_name)
+    return handler.get_file_size(url)
 
 
 def list_files(url):

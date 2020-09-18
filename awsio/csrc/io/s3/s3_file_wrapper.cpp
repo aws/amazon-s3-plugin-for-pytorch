@@ -34,9 +34,8 @@ PYBIND11_MODULE(_pywrap_s3_io, m) {
                  return self->file_exists(file_url);
              })
         .def("get_file_size",
-             [](S3Init* self, const std::string& bucket,
-                const std::string& object) {
-                 return self->get_file_size(bucket, object);
+             [](S3Init* self, const std::string& file_url) {
+                 return self->get_file_size(file_url);
         });
 }
 }  // namespace
