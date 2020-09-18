@@ -249,7 +249,8 @@ S3Init::S3Init()
         buffer_size_ = std::stoull(bufferSizeStr);
     }
     multi_part_download_ = true;
-    const char *multi_download_disable_char = getenv("S3_DISABLE_MULTI_PART_DOWNLOAD");
+    const char *multi_download_disable_char =
+        getenv("S3_DISABLE_MULTI_PART_DOWNLOAD");
     if (multi_download_disable_char) {
         std::string multi_download_disable_str(multi_download_disable_char);
         if (multi_download_disable_str == "ON") {
@@ -309,8 +310,8 @@ S3Init::initializeTransferManager() {
 void S3Init::s3_read(const std::string &file_url, std::string *result) {
     std::string bucket, object;
     parseS3Path(file_url, &bucket, &object);
-    S3FS s3handler(bucket, object, multi_part_download_, initializeTransferManager(),
-                   initializeS3Client());
+    S3FS s3handler(bucket, object, multi_part_download_,
+                   initializeTransferManager(), initializeS3Client());
 
     std::unique_ptr<char[]> buffer(new char[buffer_size_]);
     std::stringstream ss;
@@ -366,7 +367,9 @@ size_t S3Init::get_file_size(const std::string &bucket,
     if (headObjectOutcome.IsSuccess()) {
         return headObjectOutcome.GetResult().GetContentLength();
     }
-    throw std::invalid_argument{"The specified file doesn't exist."};
+    Aws::String const &error_aws = headObjectOutcome.GetError().GetMessage();
+    std::string error_str(error_aws.c_str(), error_aws.size());
+    throw std::runtime_error(error_str);
     return 0;
 }
 
@@ -379,30 +382,32 @@ void S3Init::list_files(const std::string &file_url,
         default_key = "/";
     }
 
-    Aws::S3::Model::ListObjectsRequest request;
-    request.WithBucket(bucket.c_str())
+    Aws::S3::Model::ListObjectsRequest listObjectsRequest;
+    listObjectsRequest.WithBucket(bucket.c_str())
         .WithPrefix(prefix.c_str())
         .WithMaxKeys(S3GetFilesMaxKeys)
         .WithDelimiter("/");
 
-    Aws::S3::Model::ListObjectsResult result;
+    Aws::S3::Model::ListObjectsResult listObjectsResult;
     do {
-        auto outcome = this->initializeS3Client()->ListObjects(request);
-        if (!outcome.IsSuccess()) {
-            throw std::invalid_argument{
-                "The specified bucket/folder doesn't exist."};
+        auto listObjectsOutcome =
+            this->initializeS3Client()->ListObjects(listObjectsRequest);
+        if (!listObjectsOutcome.IsSuccess()) {
+            Aws::String const &error_aws =
+                listObjectsOutcome.GetError().GetMessage();
+            std::string error_str(error_aws.c_str(), error_aws.size());
         }
 
-        result = outcome.GetResult();
-        for (const auto &object : result.GetContents()) {
+        listObjectsResult = listObjectsOutcome.GetResult();
+        for (const auto &object : listObjectsResult.GetContents()) {
             Aws::String key = default_key + object.GetKey();
             Aws::String entry = key.substr(prefix.length());
             if (entry.length() >= 0) {
                 filenames->push_back(entry.c_str());
             }
         }
-        request.SetMarker(result.GetNextMarker());
-    } while (result.GetIsTruncated());
+        listObjectsRequest.SetMarker(listObjectsResult.GetNextMarker());
+    } while (listObjectsResult.GetIsTruncated());
 }
 
 }  // namespace awsio
