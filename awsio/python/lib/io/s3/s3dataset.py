@@ -86,15 +86,15 @@ class S3Dataset(IterableDataset):
     """
     def __init__(self, urls_list, batch_size=1):
         urls = [urls_list] if isinstance(urls_list, str) else urls_list
-        handler = _pywrap_s3_io.S3Init()
+        self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
         for url in urls:
             if file_exists(url):
-                self.urls_list.extend(url)
+                self.urls_list = self.urls_list.extend(
+                    url) if self.urls_list else [url]
             else:
-                self.urls_list.extend(handler.list_files(url))
+                self.urls_list.extend(self.handler.list_files(url))
         self.batch_size = batch_size
-        self.handler = _pywrap_s3_io.S3Init()
 
     @property
     def shuffled_list(self):
