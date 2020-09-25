@@ -2,6 +2,7 @@ import tarfile
 import io
 import zipfile
 import re
+import torch
 from torch.utils.data import IterableDataset
 import _pywrap_s3_io
 import random
@@ -112,7 +113,7 @@ class S3Dataset(IterableDataset):
             for fname, content in zipfile:
                 yield fname, content
         else:
-            yield self.handler.s3_read(filename)
+            yield filename, self.handler.s3_read(filename)
 
     def get_stream(self, urls_list):
         return chain.from_iterable(map(self.download_data, urls_list))
