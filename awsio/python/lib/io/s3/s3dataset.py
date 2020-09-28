@@ -9,6 +9,7 @@ from itertools import chain
 
 meta_prefix = "__"
 meta_suffix = "__"
+handler = _pywrap_s3_io.S3Init()
 
 
 def reraise_exception(exn):
@@ -63,20 +64,17 @@ def zipdata(fileobj, handler=reraise_exception):
 
 def file_exists(url):
     """Return if file exists or not"""
-    handler = _pywrap_s3_io.S3Init()
     return handler.file_exists(url)
 
 
 def get_file_size(url):
     """Return the file size of the specified file"""
-    handler = _pywrap_s3_io.S3Init()
     return handler.get_file_size(url)
 
 
 def list_files(url):
     """Returns a list of entries under the same prefix.
     """
-    handler = _pywrap_s3_io.S3Init()
     return [url + filename for filename in handler.list_files(url)]
 
 
@@ -84,9 +82,10 @@ class S3Dataset(IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
-    def __init__(self, urls_list, batch_size=1):
+    def __init__(self, urls_list, shuffle_urls=False):
         urls = [urls_list] if isinstance(urls_list, str) else urls_list
-        self.handler = _pywrap_s3_io.S3Init()
+        self.handler = handler
+        self.shuffle_urls = shuffle_urls
         self.urls_list = list()
         for url in urls:
             if not file_exists(url):
@@ -95,11 +94,13 @@ class S3Dataset(IterableDataset):
                 self.urls_list.append(url)
             else:
                 self.urls_list = [url]
-        self.batch_size = batch_size
 
     @property
     def shuffled_list(self):
-        return random.sample(self.urls_list, len(self.urls_list))
+        if self.shuffle_urls:
+            return random.sample(self.urls_list, len(self.urls_list))
+        else:
+            return self.urls_list
 
     def download_data(self, filename):
         if filename[-3:] == "tar":
@@ -116,13 +117,18 @@ class S3Dataset(IterableDataset):
     def get_stream(self, urls_list):
         return chain.from_iterable(map(self.download_data, urls_list))
 
-    def get_by_batches(self):
-        return zip(*[
-            self.get_stream(self.shuffled_list) for _ in range(self.batch_size)
-        ])
+    def worker_dist(self, urls):
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            wid = worker_info.id
+            num_workers = worker_info.num_workers
+            return urls[wid::num_workers]
+        else:
+            return urls
 
     def __iter__(self):
-        return self.get_by_batches()
+        urls = self.worker_dist(self.shuffled_list)
+        return self.get_stream(urls)
 
     def __len__(self):
         return len(self.urls_list)
