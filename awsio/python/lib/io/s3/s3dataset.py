@@ -3,13 +3,14 @@ import io
 import zipfile
 import re
 from torch.utils.data import IterableDataset, Dataset
+import torch
+import torch.distributed as dist
 import _pywrap_s3_io
 import random
 from itertools import chain
 
 meta_prefix = "__"
 meta_suffix = "__"
-
 
 def reraise_exception(exn):
     """Called in an exception handler to re-raise the exception."""
@@ -77,7 +78,7 @@ def list_files(url):
     """Returns a list of entries under the same prefix.
     """
     handler = _pywrap_s3_io.S3Init()
-    return [url + filename for filename in handler.list_files(url)]
+    return handler.list_files(url)
 
 
 class S3Dataset(Dataset):
@@ -90,7 +91,6 @@ class S3Dataset(Dataset):
                 filenames starting with 's3://'. Each string is assumed
                 as a filename first. If the file doesn't exist, the string
                 is assumed as a prefix.
-            batch_size (int, optional): the number of samples in a batch.
         """
         urls = [urls_list] if isinstance(urls_list, str) else urls_list
         self.handler = _pywrap_s3_io.S3Init()
@@ -116,9 +116,11 @@ class S3IterableDataset(IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
-    def __init__(self, urls_list, batch_size=1):
+    def __init__(self, urls_list, shuffle_urls=False):
+        self.epoch = 0
         urls = [urls_list] if isinstance(urls_list, str) else urls_list
         self.handler = _pywrap_s3_io.S3Init()
+        self.shuffle_urls = shuffle_urls
         self.urls_list = list()
         for url in urls:
             if not file_exists(url):
@@ -127,11 +129,14 @@ class S3IterableDataset(IterableDataset):
                 self.urls_list.append(url)
             else:
                 self.urls_list = [url]
-        self.batch_size = batch_size
 
     @property
     def shuffled_list(self):
-        return random.sample(self.urls_list, len(self.urls_list))
+        if self.shuffle_urls:
+            random.seed(self.epoch)
+            return random.sample(self.urls_list, len(self.urls_list))
+        else:
+            return self.urls_list
 
     def download_data(self, filename):
         if filename[-3:] == "tar":
@@ -143,18 +148,34 @@ class S3IterableDataset(IterableDataset):
             for fname, content in zipfile:
                 yield fname, content
         else:
-            yield self.handler.s3_read(filename)
+            yield filename, self.handler.s3_read(filename)
 
     def get_stream(self, urls_list):
         return chain.from_iterable(map(self.download_data, urls_list))
 
-    def get_by_batches(self):
-        return zip(*[
-            self.get_stream(self.shuffled_list) for _ in range(self.batch_size)
-        ])
+    def worker_dist(self, urls):
+        if dist.is_initialized() :
+            world_size = dist.get_world_size()
+            rank = dist.get_rank()
+            total_size = len(urls)
+            urls = urls[rank:total_size:world_size]
+
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            wid = worker_info.id
+            num_workers = worker_info.num_workers
+            length = len(urls)
+            return urls[wid:length:num_workers]
+        else:
+            return urls
 
     def __iter__(self):
-        return self.get_by_batches()
+        urls = self.worker_dist(self.shuffled_list)
+        return self.get_stream(urls)
 
     def __len__(self):
         return len(self.urls_list)
+
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch

@@ -43,7 +43,9 @@ def test_list_files_bucket():
     s3 = boto3.resource('s3')
     test_bucket = s3.Bucket('ydaiming-test-data2')
     result2 = []
-    for url in test_bucket.objects.filter(Delimiter='/'):
+    for url in test_bucket.objects.all():
+        if url.key[-1] == '/':
+            continue
         result2.append('s3://' + url.bucket_name + '/' + url.key)
     assert isinstance(result1, list)
     assert isinstance(result2, list)
@@ -72,7 +74,7 @@ def test_multi_download():
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
+        result1 = pd.read_csv(io.BytesIO(files[1]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
                         Key=s3_dataset_path.split('/')[3])
@@ -87,7 +89,7 @@ def test_disable_multi_download():
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
+        result1 = pd.read_csv(io.BytesIO(files[1]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
                         Key=s3_dataset_path.split('/')[3])
