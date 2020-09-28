@@ -93,6 +93,12 @@ void ShutdownTransferManager(
     }
 }
 
+void ShutdownExecutor(Aws::Utils::Threading::PooledThreadExecutor *executor) {
+  if (executor != nullptr) {
+    delete executor;
+  }
+}
+
 void parseS3Path(const std::string &fname, std::string *bucket,
                  std::string *object) {
     if (fname.empty()) {
@@ -226,6 +232,7 @@ class S3FS {
 S3Init::S3Init()
     : s3_client_(nullptr, ShutdownClient),
       transfer_manager_(nullptr, ShutdownTransferManager),
+      executor_(nullptr, ShutdownExecutor),
       initialization_lock_() {
     // Load reading parameters
     buffer_size_ = s3ReadBufferSize;
@@ -253,6 +260,7 @@ std::shared_ptr<Aws::S3::S3Client> S3Init::initializeS3Client() {
         options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Trace;
 
         Aws::InitAPI(options);
+
         // Set up the request
         this->s3_client_ =
             std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
@@ -270,7 +278,7 @@ S3Init::initializeExecutor() {
             Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
                 "executor", executorPoolSize);
     }
-    return executor_;
+    return this->executor_;
 }
 
 std::shared_ptr<Aws::Transfer::TransferManager>
@@ -289,7 +297,7 @@ S3Init::initializeTransferManager() {
         this->transfer_manager_ =
             Aws::Transfer::TransferManager::Create(transfer_config);
     }
-    return transfer_manager_;
+    return this->transfer_manager_;
 }
 
 void S3Init::s3_read(const std::string &file_url, std::string *result) {
@@ -374,8 +382,7 @@ void S3Init::list_files(const std::string &file_url,
     Aws::S3::Model::ListObjectsRequest listObjectsRequest;
     listObjectsRequest.WithBucket(bucket.c_str())
         .WithPrefix(prefix.c_str())
-        .WithMaxKeys(S3GetFilesMaxKeys)
-        .WithDelimiter("/");
+        .WithMaxKeys(S3GetFilesMaxKeys);
 
     Aws::S3::Model::ListObjectsResult listObjectsResult;
     do {
@@ -391,12 +398,14 @@ void S3Init::list_files(const std::string &file_url,
         listObjectsResult = listObjectsOutcome.GetResult();
         for (const auto &object : listObjectsResult.GetContents()) {
             Aws::String key = default_key + object.GetKey();
-            Aws::String entry = key.substr(prefix.length());
-            if (entry.length() >= 0) {
-                filenames->push_back(entry.c_str());
+            if (key.back() == '/') {
+                 continue;
             }
+            Aws::String bucket_aws(bucket.c_str(), bucket.size());
+            Aws::String entry = "s3://" + bucket_aws + "/" + object.GetKey();
+            filenames->push_back(entry.c_str());
         }
-        listObjectsRequest.SetMarker(listObjectsResult.GetNextMarker());
+        listObjectsRequest.SetMarker(listObjectsResult.GetContents().back().GetKey());
     } while (listObjectsResult.GetIsTruncated());
 }
 

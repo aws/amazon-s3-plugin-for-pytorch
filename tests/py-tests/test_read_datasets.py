@@ -100,7 +100,7 @@ def test_csv_file_s3iterabledataset():
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
+        result1 = pd.read_csv(io.BytesIO(files[1]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2], Key=s3_dataset_path.split('/')[3])
     result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
