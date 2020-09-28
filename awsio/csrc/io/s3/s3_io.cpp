@@ -369,7 +369,7 @@ size_t S3Init::get_file_size(const std::string &bucket,
     }
     Aws::String const &error_aws = headObjectOutcome.GetError().GetMessage();
     std::string error_str(error_aws.c_str(), error_aws.size());
-    throw std::runtime_error(error_str);
+    throw std::invalid_argument(error_str);
     return 0;
 }
 
@@ -402,6 +402,7 @@ void S3Init::list_files(const std::string &file_url,
             Aws::String const &error_aws =
                 listObjectsOutcome.GetError().GetMessage();
             std::string error_str(error_aws.c_str(), error_aws.size());
+            throw std::invalid_argument(error_str);
         }
 
         listObjectsResult = listObjectsOutcome.GetResult();

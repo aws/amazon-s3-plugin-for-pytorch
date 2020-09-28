@@ -89,11 +89,12 @@ class S3Dataset(IterableDataset):
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
         for url in urls:
-            if file_exists(url):
-                self.urls_list = self.urls_list.extend(
-                    url) if self.urls_list else [url]
-            else:
+            if not file_exists(url):
                 self.urls_list.extend(self.handler.list_files(url))
+            elif self.urls_list:
+                self.urls_list.append(url)
+            else:
+                self.urls_list = [url]
         self.batch_size = batch_size
 
     @property
