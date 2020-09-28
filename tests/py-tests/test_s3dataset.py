@@ -7,6 +7,20 @@ from awsio.python.lib.io.s3.s3dataset import (list_files, file_exists,
 import boto3
 
 
+def test_wrong_filenames():
+    filenames = ['', 'shor', 'not_start_s3', 's3://', 's3:///no_bucket']
+    functions = [list_files, file_exists, get_file_size]
+    exception = False
+    for function in functions:
+        for filename in filenames:
+            try:
+                function(filename)
+            except ValueError:
+                exception = True
+            assert exception
+            exception = False
+
+
 def test_list_files_prefix():
     # default region is us-west-2
     s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
@@ -94,9 +108,20 @@ def test_get_file_size(bucket_name, object_name):
     s3 = boto3.resource('s3')
     bucket = s3.Bucket(bucket_name)
     result2 = bucket.Object(object_name).content_length
-    assert result1 == result2
+    try:
+        result1 = get_file_size('s3://' + bucket_name + '/' + object_name)
+    except RuntimeError:
+        result1 = False
+    try:
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(bucket_name)
+        result2 = bucket.Object(object_name).content_length
+    except Exception:
+        result2 = False
+        assert result1 == result2
 
 
+test_wrong_filenames()
 test_list_files_prefix()
 test_list_files_bucket()
 test_regions('us-east-1', 's3://roshanin-dev/test/n', 'roshanin-dev', 'test/n')
@@ -104,6 +129,7 @@ test_file_exists('ydaiming-test-data2', 'test_0.JPEG')
 test_file_exists('ydaiming-test-data2', 'test_new_file.JPEG')
 test_file_exists('ydaiming-test-data2', 'folder_1')
 test_get_file_size('ydaiming-test-data2', 'test_0.JPEG')
+test_get_file_size('ydaiming-test-data2', 'test_0')
 test_multi_download('s3://ydaiming-test-data2/test_0/test',
                     'ydaiming-test-data2', 'test_0/test')
 test_disable_multi_download('s3://ydaiming-test-data2/test_0/test',
