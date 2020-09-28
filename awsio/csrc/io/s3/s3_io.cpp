@@ -38,8 +38,14 @@ static const int64_t s3TimeoutMsec = 300000;
 static const int executorPoolSize = 25;
 static const int S3GetFilesMaxKeys = 100;
 
+
 Aws::Client::ClientConfiguration &setUpS3Config() {
+    static std::mutex cfg_lock;
+    static bool init(false);
     static Aws::Client::ClientConfiguration cfg;
+    std::lock_guard<std::mutex> lock(cfg_lock);
+
+    if(!init){
     Aws::String config_file;
     // If AWS_CONFIG_FILE is set then use it, otherwise use ~/.aws/config.
     const char *config_file_env = getenv("AWS_CONFIG_FILE");
@@ -74,9 +80,11 @@ Aws::Client::ClientConfiguration &setUpS3Config() {
 
     const char *region = getenv("AWS_REGION");
     if (region) {
-        cfg.region = region;
+        cfg.region = Aws::String(region);
     } else {
         cfg.region = "us-west-2";
+    } 
+    init = true; 
     }
     return cfg;
 }
@@ -94,6 +102,12 @@ void ShutdownTransferManager(
     if (transfer_manager != nullptr) {
         delete transfer_manager;
     }
+}
+
+void ShutdownExecutor(Aws::Utils::Threading::PooledThreadExecutor *executor) {
+  if (executor != nullptr) {
+    delete executor;
+  }
 }
 
 void parseS3Path(const std::string &fname, std::string *bucket,
@@ -241,6 +255,7 @@ class S3FS {
 S3Init::S3Init()
     : s3_client_(nullptr, ShutdownClient),
       transfer_manager_(nullptr, ShutdownTransferManager),
+      executor_(nullptr, ShutdownExecutor),
       initialization_lock_() {
     // Load reading parameters
     buffer_size_ = s3ReadBufferSize;
@@ -268,6 +283,7 @@ std::shared_ptr<Aws::S3::S3Client> S3Init::initializeS3Client() {
         options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Trace;
 
         Aws::InitAPI(options);
+
         // Set up the request
         this->s3_client_ =
             std::shared_ptr<Aws::S3::S3Client>(new Aws::S3::S3Client(
@@ -285,7 +301,7 @@ S3Init::initializeExecutor() {
             Aws::MakeShared<Aws::Utils::Threading::PooledThreadExecutor>(
                 "executor", executorPoolSize);
     }
-    return executor_;
+    return this->executor_;
 }
 
 std::shared_ptr<Aws::Transfer::TransferManager>
@@ -304,7 +320,7 @@ S3Init::initializeTransferManager() {
         this->transfer_manager_ =
             Aws::Transfer::TransferManager::Create(transfer_config);
     }
-    return transfer_manager_;
+    return this->transfer_manager_;
 }
 
 void S3Init::s3_read(const std::string &file_url, std::string *result) {
