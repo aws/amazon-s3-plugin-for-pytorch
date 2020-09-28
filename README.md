@@ -62,4 +62,21 @@ To run the sample, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSIO
 ./aws_io
 ```
 
+### Test Coverage
+
+To check python test coverage, install [`coverage.py`](https://coverage.readthedocs.io/en/latest/index.html) as follows:
+
+```
+pip install coverage
+```
+
+To run tests and calculate coverage:
+
+```asm
+coverage erase
+coverage run -p --source=awsio -m pytest  -v tests/py-tests/test_regions.py
+coverage run -p --source=awsio -m pytest  -v tests/py-tests/test_s3dataset.py tests/py-tests/test_read_datasets.py 
+coverage combine
+coverage report -m
+```
 
