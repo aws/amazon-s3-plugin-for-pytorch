@@ -14,7 +14,7 @@ def get_tar(s3_dataset_path):
     filenames_boto3 = []
     for tarinfo in stream:
         fname = tarinfo.name
-        stream.extractfile(tarinfo).read()
+        data = stream.extractfile(tarinfo).read()
         filenames_boto3.append(fname)
     return filenames_boto3
 
@@ -37,7 +37,7 @@ def get_zip(s3_dataset_path):
     filenames_boto3 = []
     with zipfile.ZipFile('/tmp/input_file.zip', 'r') as zfile:
         for file_ in zfile.namelist():
-            zfile.read(file_)
+            data = zfile.read(file_)
             filenames_boto3.append(file_)
     return filenames_boto3
 
@@ -52,21 +52,3 @@ def test_zip_file():
     result2 = get_zip(s3_dataset_path)
     assert result1 == len(result2)
 
-
-def test_csv_file():
-    os.environ['AWS_REGION'] = 'us-east-1'
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
-    dataset = S3Dataset(s3_dataset_path)
-    import pandas as pd
-    for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
-    s3 = boto3.client('s3')
-    obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2], Key=s3_dataset_path.split('/')[3])
-    result2 = pd.read_csv(io.BytesIO(obj['Body'].read())) 
-    assert result1.equals(result2)
-    del os.environ['AWS_REGION']
-
-
-test_tar_file()
-test_zip_file()
-test_csv_file()
