@@ -9,7 +9,20 @@
 
 ### Adding AWS-SDK-CPP as a dependency
 
-1) Build the SDK from source.
+1) Install AWS-SDK-CPP [Preferred Approach]
+
+Note: Only install s3 and transfer components as mentioned below.
+
+https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/setup.html
+
+Building and installing whole package takes few hours to build so just added S3 plugin which we need for this project.
+
+```
+cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
+make install
+```
+
+2) Build the SDK from source.
 
 ```
 > git clone git@github.com:aws/aws-sdk-cpp.git
@@ -29,14 +42,7 @@ aws-sdk-cpp/build> cmake .. -DCMAKE_BUILD_TYPE=Debug
 aws-sdk-cpp/build> make
 ```
 
-2) Install AWS-SDK-CPP
 
-Building and installing whole package takes few hours to build so just added S3 plugin which we need for this project.
-
-```
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3"
-make install
-```
 
 Few things to take care of while building the project: 
 - The find_package arguments changed to AWSSDK (looks for AWSSDKConfig.cmake), REQUIRED (generates a fatal error if AWSSDK is not found), and COMPONENTS, followed by a list of components 
