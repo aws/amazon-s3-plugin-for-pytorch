@@ -4,7 +4,7 @@
 - Pytorch 1.5
 - AWS-SDK-CPP (core and S3) See below for instructions
 - cmake (>v3.2)
-- python development libraries(including pybind 11) (pip install pybind11)
+- python development libraries(including pybind 11) (conda install pybind11)
 - Abseil - https://abseil.io/docs/cpp/quickstart-cmake.html
 
 
