@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "absl/strings/string_view.h"
 #include "pybind11/pybind11.h"
 #include "s3_io.h"
 

@@ -25,9 +25,6 @@
 #include <fstream>
 #include <string>
 
-#include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
-
 namespace awsio {
 namespace {
 // static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
@@ -138,17 +135,15 @@ class S3FS {
           transfer_manager_(transfer_manager),
           s3_client_(s3_client) {}
 
-    bool read(uint64_t offset, size_t n, char *buffer,
-              StringContainer *result) {
+    size_t read(uint64_t offset, size_t n, char *buffer) {
         if (multi_part_download_) {
-            return readS3TransferManager(offset, n, buffer, result);
+            return readS3TransferManager(offset, n, buffer);
         } else {
-            return readS3Client(offset, n, buffer, result);
+            return readS3Client(offset, n, buffer);
         }
     }
 
-    bool readS3Client(uint64_t offset, size_t n, char *buffer,
-                      StringContainer *result) {
+    size_t readS3Client(uint64_t offset, size_t n, char *buffer) {
         std::cout << "Read File from S3 s3://" << this->bucket_name_ << "/"
                   << this->object_name_ << " from " << offset << " for n:" << n
                   << std::endl;
@@ -158,7 +153,8 @@ class S3FS {
         getObjectRequest.WithBucket(this->bucket_name_.c_str())
             .WithKey(this->object_name_.c_str());
 
-        std::string bytes = absl::StrCat("bytes=", offset, "-", offset + n - 1);
+        std::string bytes = "bytes=";
+	bytes += std::to_string(offset) + "-" + std::to_string(offset + n - 1);
 
         getObjectRequest.SetRange(bytes.c_str());
 
@@ -174,18 +170,16 @@ class S3FS {
             auto error = getObjectOutcome.GetError();
             std::cout << "ERROR: " << error.GetExceptionName() << ": "
                       << error.GetMessage() << std::endl;
-            return false;
+            return 0;
         } else {
             n = getObjectOutcome.GetResult().GetContentLength();
             // read data as a block:
             getObjectOutcome.GetResult().GetBody().read(buffer, n);
-            *result = StringContainer(buffer, n);
-            return true;
+            return n;
         }
     }
 
-    bool readS3TransferManager(uint64_t offset, size_t n, char *buffer,
-                               StringContainer *result) {
+    size_t readS3TransferManager(uint64_t offset, size_t n, char *buffer) {
         std::cout << "ReadFilefromS3 s3:// using Transfer Manager API: ";
 
         auto create_stream_fn = [&]() {  // create stream lambda fn
@@ -212,20 +206,11 @@ class S3FS {
         if (downloadHandle->GetStatus() !=
             Aws::Transfer::TransferStatus::COMPLETED) {
             auto error = downloadHandle->GetLastError();
-            if (error.GetResponseCode() ==
-                Aws::Http::HttpResponseCode::REQUESTED_RANGE_NOT_SATISFIABLE) {
-                n = 0;
-                *result = StringContainer(buffer, n);
-                std::cout << "ERROR: " << error.GetExceptionName() << ": "
-                          << error.GetMessage() << std::endl;
-            }
             std::cout << "ERROR: " << error.GetExceptionName() << ": "
                       << error.GetMessage() << std::endl;
+	    return 0;
         } else {
-            n = downloadHandle->GetBytesTotalSize();
-            *result =
-                StringContainer(buffer, downloadHandle->GetBytesTransferred());
-            return true;
+            return downloadHandle->GetBytesTransferred();
         }
     }
 
@@ -325,18 +310,17 @@ void S3Init::s3_read(const std::string &file_url, std::string *result) {
 
     for (int i = 0; i < part_count; i++) {
         offset = i * buffer_size_;
-        StringContainer read_chunk;
-        bool flag =
-            s3handler.read(offset, buffer_size_, buffer.get(), &read_chunk);
+        size_t read_len =
+            s3handler.read(offset, buffer_size_, buffer.get());
 
-        if (read_chunk.size() != 0) {
-            ss.write(read_chunk.data(), read_chunk.size());
-            result_size += read_chunk.size();
+        if (read_len != 0) {
+            ss.write(buffer.get(), read_len);
+            result_size += read_len;
         }
         if (result_size == file_size) {
             break;
         }
-        if (read_chunk.size() != buffer_size_) {
+        if (read_len != buffer_size_) {
             std::cout << "Result size and buffer size did not match";
             break;
         }
