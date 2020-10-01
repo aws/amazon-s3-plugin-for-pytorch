@@ -298,8 +298,6 @@ void S3Init::s3_read(const std::string &file_url, std::string *result) {
     S3FS s3handler(bucket, object, multi_part_download_,
                    initializeTransferManager(), initializeS3Client());
 
-    std::unique_ptr<char[]> buffer(new char[buffer_size_]);
-    std::stringstream ss;
     uint64_t offset = 0;
     uint64_t result_size = 0;
     uint64_t file_size = this->get_file_size(bucket, object);
@@ -309,24 +307,25 @@ void S3Init::s3_read(const std::string &file_url, std::string *result) {
     result->resize(file_size);
 
     for (int i = 0; i < part_count; i++) {
-        offset = i * buffer_size_;
-        size_t read_len =
-            s3handler.read(offset, buffer_size_, buffer.get());
 
-        if (read_len != 0) {
-            ss.write(buffer.get(), read_len);
-            result_size += read_len;
-        }
+        offset = result_size;
+
+	size_t buf_len = std::min(buffer_size_, file_size - result_size);
+
+        size_t read_len =
+            s3handler.read(offset, buf_len, (char *)(result->data()) + offset);
+
+        result_size += read_len;
+
         if (result_size == file_size) {
             break;
         }
-        if (read_len != buffer_size_) {
+
+        if (read_len != buf_len) {
             std::cout << "Result size and buffer size did not match";
             break;
         }
     }
-    memcpy((char *)(result->data()), ss.str().data(),
-           static_cast<size_t>(file_size));
 }
 
 bool S3Init::file_exists(const std::string &file_url) {
