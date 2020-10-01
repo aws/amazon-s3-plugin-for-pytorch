@@ -71,8 +71,7 @@ def test_multi_download():
     os.environ['AWS_REGION'] = 'us-east-1'
     dataset = S3Dataset(s3_dataset_path)
     import pandas as pd
-    for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
+    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
                         Key=s3_dataset_path.split('/')[3])
@@ -86,8 +85,7 @@ def test_disable_multi_download():
     os.environ['AWS_REGION'] = 'us-east-1'
     dataset = S3Dataset(s3_dataset_path)
     import pandas as pd
-    for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
+    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
                         Key=s3_dataset_path.split('/')[3])

@@ -22,10 +22,10 @@ def get_tar(s3_dataset_path):
 def test_tar_file():
     s3_dataset_path = 's3://roshanin-test-data/tinyimagenet.tar'
     dataset = S3Dataset(s3_dataset_path)
-    list_of_files = []
-    for files in dataset:
-        list_of_files.append(files[0][0])
-    result1 = len(list_of_files)
+    fileobj = io.BytesIO(dataset[0][1])
+    import tarfile
+    with tarfile.open(fileobj=fileobj, mode="r|*") as tar:
+        result1 = len(tar.getmembers())
     result2 = get_tar(s3_dataset_path)
     assert result1 == len(result2)
 
@@ -45,10 +45,10 @@ def get_zip(s3_dataset_path):
 def test_zip_file():
     s3_dataset_path = 's3://roshanin-test-data/tiny-imagenet-200.zip'
     dataset = S3Dataset(s3_dataset_path)
-    list_of_files = []
-    for files in dataset:
-        list_of_files.append(files[0][0])
-    result1 = len(list_of_files)
+    fileobj = io.BytesIO(dataset[0][1])
+    import zipfile
+    with zipfile.ZipFile(fileobj, 'r') as zfile:
+        result1 = len(zfile.namelist())
     result2 = get_zip(s3_dataset_path)
     assert result1 == len(result2)
 
@@ -58,11 +58,10 @@ def test_csv_file():
     s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
     dataset = S3Dataset(s3_dataset_path)
     import pandas as pd
-    for files in dataset:
-        result1 = pd.read_csv(io.BytesIO(files[0]))
+    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2], Key=s3_dataset_path.split('/')[3])
-    result2 = pd.read_csv(io.BytesIO(obj['Body'].read())) 
+    result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
     assert result1.equals(result2)
     del os.environ['AWS_REGION']
 
