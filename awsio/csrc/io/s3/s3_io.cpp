@@ -28,8 +28,8 @@
 namespace awsio {
 namespace {
 // static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
-static const size_t s3ReadBufferSize = 16 * 1024 * 1024;               // 16 MB
-static const uint64_t s3MultiPartDownloadChunkSize = 2 * 1024 * 1024;  // 50 MB
+static const size_t s3ReadBufferSize = 60 * 1024 * 1024;               // 16 MB
+static const uint64_t s3MultiPartDownloadChunkSize = 20 * 1024 * 1024;  // 50 MB
 static const int downloadRetries = 3;
 static const int64_t s3TimeoutMsec = 300000;
 static const int executorPoolSize = 25;
@@ -158,9 +158,6 @@ class S3FS {
     }
 
     size_t readS3Client(uint64_t offset, size_t n, char *buffer) {
-        std::cout << "Read File from S3 s3://" << this->bucket_name_ << "/"
-                  << this->object_name_ << " from " << offset << " for n:" << n
-                  << std::endl;
 
         Aws::S3::Model::GetObjectRequest getObjectRequest;
 
@@ -182,8 +179,6 @@ class S3FS {
 
         if (!getObjectOutcome.IsSuccess()) {
             auto error = getObjectOutcome.GetError();
-            std::cout << "ERROR: " << error.GetExceptionName() << ": "
-                      << error.GetMessage() << std::endl;
             return 0;
         } else {
             n = getObjectOutcome.GetResult().GetContentLength();
@@ -194,7 +189,6 @@ class S3FS {
     }
 
     size_t readS3TransferManager(uint64_t offset, size_t n, char *buffer) {
-        std::cout << "ReadFilefromS3 s3:// using Transfer Manager API: ";
 
         auto create_stream_fn = [&]() {  // create stream lambda fn
             return Aws::New<S3UnderlyingStream>(
@@ -204,7 +198,6 @@ class S3FS {
                     n));
         };
 
-        std::cout << "Created stream to read with transferManager";
 
         // This buffer is what we used to initialize streambuf and is in memory
         std::shared_ptr<Aws::Transfer::TransferHandle> downloadHandle =
@@ -212,7 +205,6 @@ class S3FS {
                 this->bucket_name_.c_str(), this->object_name_.c_str(), offset,
                 n, create_stream_fn);
         downloadHandle->WaitUntilFinished();
-        std::cout << "File download to memory finished!" << std::endl;
 
         Aws::OFStream storeFile(object_name_.c_str(),
                                 Aws::OFStream::out | Aws::OFStream::trunc);
@@ -220,8 +212,6 @@ class S3FS {
         if (downloadHandle->GetStatus() !=
             Aws::Transfer::TransferStatus::COMPLETED) {
             auto error = downloadHandle->GetLastError();
-            std::cout << "ERROR: " << error.GetExceptionName() << ": "
-                      << error.GetMessage() << std::endl;
 	    return 0;
         } else {
             return downloadHandle->GetBytesTransferred();
@@ -262,7 +252,7 @@ S3Init::S3Init()
 S3Init::~S3Init() {}
 
 std::shared_ptr<Aws::S3::S3Client> S3Init::initializeS3Client() {
-    std::lock_guard<std::mutex> lock(this->initialization_lock_);
+    // std::lock_guard<std::mutex> lock(this->initialization_lock_);
     if (this->s3_client_.get() == nullptr) {
         Aws::SDKOptions options;
         options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Trace;
@@ -337,7 +327,6 @@ void S3Init::s3_read(const std::string &file_url, std::string *result) {
             break;
         }
         if (read_len != buffer_size_) {
-            std::cout << "Result size and buffer size did not match";
             break;
         }
     }
@@ -387,13 +376,10 @@ void S3Init::list_files(const std::string &file_url,
     if (prefix.empty()) {
         default_key = "/";
     }
-
     Aws::S3::Model::ListObjectsRequest listObjectsRequest;
     listObjectsRequest.WithBucket(bucket.c_str())
         .WithPrefix(prefix.c_str())
-        .WithMaxKeys(S3GetFilesMaxKeys)
-        .WithDelimiter("/");
-
+        .WithMaxKeys(S3GetFilesMaxKeys);
     Aws::S3::Model::ListObjectsResult listObjectsResult;
     do {
         auto listObjectsOutcome =
@@ -404,16 +390,18 @@ void S3Init::list_files(const std::string &file_url,
             std::string error_str(error_aws.c_str(), error_aws.size());
             throw std::invalid_argument(error_str);
         }
-
         listObjectsResult = listObjectsOutcome.GetResult();
         for (const auto &object : listObjectsResult.GetContents()) {
             Aws::String key = default_key + object.GetKey();
+            if (key.back() == '/') {
+                continue;
+            }
             Aws::String entry = key.substr(prefix.length());
             if (entry.length() >= 0) {
                 filenames->push_back(entry.c_str());
             }
         }
-        listObjectsRequest.SetMarker(listObjectsResult.GetNextMarker());
+        listObjectsRequest.SetMarker(listObjectsResult.GetContents().back().GetKey());
     } while (listObjectsResult.GetIsTruncated());
 }
 

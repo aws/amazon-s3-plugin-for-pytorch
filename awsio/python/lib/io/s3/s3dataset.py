@@ -96,7 +96,8 @@ class S3Dataset(Dataset):
         self.urls_list = list()
         for url in urls:
             if not file_exists(url):
-                self.urls_list.extend(self.handler.list_files(url))
+                #self.urls_list.extend(list_files(url))
+                self.urls_list.extend([urls_list + f for f in self.handler.list_files(url)])
             elif self.urls_list:
                 self.urls_list.append(url)
             else:
@@ -135,6 +136,53 @@ class S3Dataset(Dataset):
         fileobj = self.handler.s3_read(filename)
         return filename, fileobj
 
+import boto3
+from boto3.s3.transfer import TransferConfig
+
+class S3BotoSet(Dataset):
+    """A mapped-style dataset for objects in s3.
+    """
+    def __init__(self, urls_list, bucket_name, batch_size=1):
+        """
+        Args:
+            urls_list (string or list of strings): the prefix(es) and
+                filenames starting with 's3://'. Each string is assumed
+                as a filename first. If the file doesn't exist, the string
+                is assumed as a prefix.
+            batch_size (int, optional): the number of samples in a batch.
+        """
+        urls = [urls_list] if isinstance(urls_list, str) else urls_list
+        self.handler = _pywrap_s3_io.S3Init()
+        self.urls_list = list()
+        for url in urls:
+            if not file_exists(url):
+                #self.urls_list.extend(list_files(url))
+                self.urls_list.extend([urls_list + f for f in self.handler.list_files(url)])
+            elif self.urls_list:
+                self.urls_list.append(url)
+            else:
+                self.urls_list = [url]
+        self.batch_size = batch_size
+        MB = 1024**2
+        self.config = TransferConfig(max_concurrency=10,
+                        multipart_threshold = 20 * MB)
+        self.bucket_name = bucket_name
+        self.s3 = boto3.client('s3')
+
+    def __len__(self):
+        return len(self.urls_list)
+
+    def __getitem__(self, idx):
+        filename = self.urls_list[idx]
+        filename = filename.replace('s3://' + self.bucket_name + '/', '')
+        fs = io.BytesIO()
+        print("Downloading..." + self.bucket_name + filename)
+        s= boto3.client('s3')
+        s.download_fileobj(self.bucket_name,
+                                filename,
+                                fs,
+                                Config=self.config)
+        return filename
 
 class S3IterableDataset(IterableDataset):
     """Iterate over s3 dataset.
