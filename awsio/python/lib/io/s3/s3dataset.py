@@ -2,7 +2,7 @@ import tarfile
 import io
 import zipfile
 import re
-from torch.utils.data import IterableDataset
+from torch.utils.data import IterableDataset, Dataset
 import _pywrap_s3_io
 import random
 from itertools import chain
@@ -80,7 +80,39 @@ def list_files(url):
     return [url + filename for filename in handler.list_files(url)]
 
 
-class S3Dataset(IterableDataset):
+class S3Dataset(Dataset):
+    """A mapped-style dataset for objects in s3.
+    """
+    def __init__(self, urls_list):
+        """
+        Args:
+            urls_list (string or list of strings): the prefix(es) and
+                filenames starting with 's3://'. Each string is assumed
+                as a filename first. If the file doesn't exist, the string
+                is assumed as a prefix.
+            batch_size (int, optional): the number of samples in a batch.
+        """
+        urls = [urls_list] if isinstance(urls_list, str) else urls_list
+        self.handler = _pywrap_s3_io.S3Init()
+        self.urls_list = list()
+        for url in urls:
+            if not file_exists(url):
+                self.urls_list.extend(self.handler.list_files(url))
+            elif self.urls_list:
+                self.urls_list.append(url)
+            else:
+                self.urls_list = [url]
+
+    def __len__(self):
+        return len(self.urls_list)
+
+    def __getitem__(self, idx):
+        filename = self.urls_list[idx]
+        fileobj = self.handler.s3_read(filename)
+        return filename, fileobj
+
+
+class S3IterableDataset(IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """

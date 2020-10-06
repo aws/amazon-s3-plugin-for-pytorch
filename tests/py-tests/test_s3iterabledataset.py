@@ -2,7 +2,7 @@ import numpy as np
 import os
 import io
 import pytest
-from awsio.python.lib.io.s3.s3dataset import S3Dataset
+from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
 from awsio.python.lib.io.s3.s3dataset import (list_files, file_exists,
                                               get_file_size)
 import boto3
@@ -69,9 +69,10 @@ def test_multi_download():
     if 'S3_DISABLE_MULTI_PART_DOWNLOAD' in os.environ:
         del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD']
     os.environ['AWS_REGION'] = 'us-east-1'
-    dataset = S3Dataset(s3_dataset_path)
+    dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
-    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
+    for files in dataset:
+        result1 = pd.read_csv(io.BytesIO(files[0]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
                         Key=s3_dataset_path.split('/')[3])
@@ -83,9 +84,10 @@ def test_disable_multi_download():
     s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
     os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD'] = "ON"
     os.environ['AWS_REGION'] = 'us-east-1'
-    dataset = S3Dataset(s3_dataset_path)
+    dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
-    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
+    for files in dataset:
+        result1 = pd.read_csv(io.BytesIO(files[0]))
     s3 = boto3.client('s3')
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
                         Key=s3_dataset_path.split('/')[3])
