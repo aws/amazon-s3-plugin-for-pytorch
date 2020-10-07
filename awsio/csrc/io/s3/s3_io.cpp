@@ -40,7 +40,7 @@ Aws::Client::ClientConfiguration &setUpS3Config() {
     static std::mutex cfg_lock;
     static bool init(false);
     static Aws::Client::ClientConfiguration cfg;
-    std::lock_guard<std::mutex> lock(cfg_lock);
+    // std::lock_guard<std::mutex> lock(cfg_lock);
 
     if(!init){
     Aws::String config_file;
@@ -282,7 +282,7 @@ S3Init::initializeExecutor() {
 std::shared_ptr<Aws::Transfer::TransferManager>
 S3Init::initializeTransferManager() {
     std::shared_ptr<Aws::S3::S3Client> s3_client = initializeS3Client();
-    std::lock_guard<std::mutex> lock(this->initialization_lock_);
+    // std::lock_guard<std::mutex> lock(this->initialization_lock_);
 
     if (this->transfer_manager_.get() == nullptr) {
         Aws::Transfer::TransferManagerConfiguration transfer_config(
