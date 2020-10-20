@@ -374,8 +374,7 @@ void S3Init::list_files(const std::string &file_url,
     Aws::S3::Model::ListObjectsRequest listObjectsRequest;
     listObjectsRequest.WithBucket(bucket.c_str())
         .WithPrefix(prefix.c_str())
-        .WithMaxKeys(S3GetFilesMaxKeys)
-        .WithDelimiter("/");
+        .WithMaxKeys(S3GetFilesMaxKeys);
 
     Aws::S3::Model::ListObjectsResult listObjectsResult;
     do {
@@ -391,12 +390,14 @@ void S3Init::list_files(const std::string &file_url,
         listObjectsResult = listObjectsOutcome.GetResult();
         for (const auto &object : listObjectsResult.GetContents()) {
             Aws::String key = default_key + object.GetKey();
-            Aws::String entry = key.substr(prefix.length());
-            if (entry.length() >= 0) {
-                filenames->push_back(entry.c_str());
+            if (key.back() == '/') {
+                continue;
             }
+            Aws::String bucket_aws(bucket.c_str(), bucket.size());
+            Aws::String entry = "s3://" + bucket_aws + "/" + object.GetKey();
+            filenames->push_back(entry.c_str());
         }
-        listObjectsRequest.SetMarker(listObjectsResult.GetNextMarker());
+        listObjectsRequest.SetMarker(listObjectsResult.GetContents().back().GetKey());
     } while (listObjectsResult.GetIsTruncated());
 }
 

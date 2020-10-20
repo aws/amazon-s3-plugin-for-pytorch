@@ -77,7 +77,7 @@ def list_files(url):
     """Returns a list of entries under the same prefix.
     """
     handler = _pywrap_s3_io.S3Init()
-    return [url + filename for filename in handler.list_files(url)]
+    return handler.list_files(url)
 
 
 class S3Dataset(Dataset):
@@ -90,7 +90,6 @@ class S3Dataset(Dataset):
                 filenames starting with 's3://'. Each string is assumed
                 as a filename first. If the file doesn't exist, the string
                 is assumed as a prefix.
-            batch_size (int, optional): the number of samples in a batch.
         """
         urls = [urls_list] if isinstance(urls_list, str) else urls_list
         self.handler = _pywrap_s3_io.S3Init()
