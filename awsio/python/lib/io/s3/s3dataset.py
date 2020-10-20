@@ -179,3 +179,146 @@ class S3IterableDataset(IterableDataset):
 
     def set_epoch(self, epoch):
         self.epoch = epoch
+
+class ShuffleDataset(torch.utils.data.IterableDataset):
+    def __init__(self, dataset, buffer_size):
+        super().__init__()
+        self.dataset = dataset
+        self.buffer_size = buffer_size
+
+    def __iter__(self):
+        shufbuf = []
+        try:
+            dataset_iter = iter(self.dataset)
+            for i in range(self.buffer_size):
+                shufbuf.append(next(dataset_iter))
+        except StopIteration:
+            self.buffer_size = len(shufbuf)
+
+        try:
+            while True:
+                try:
+                    evict_idx = random.randint(0, self.buffer_size - 1)
+                    yield shufbuf[evict_idx]
+                    item = next(dataset_iter)
+                    shufbuf[evict_idx] = item
+                except StopIteration:
+                    break
+            while len(shufbuf) > 0:
+                yield shufbuf.pop()
+        except GeneratorExit:
+            pass
+
+import boto3
+from boto3.s3.transfer import TransferConfig
+
+class S3BotoSet(Dataset):
+    """A mapped-style dataset for objects in s3.
+    """
+    def __init__(self, bucket_name, prefix):
+        url = 's3://' + bucket_name + '/' + prefix
+        self.handler = _pywrap_s3_io.S3Init()
+        self.urls_list = list()
+        self.urls_list.extend(self.handler.list_files(url))
+        print(self.urls_list)
+
+        MB = 1024**2
+        self.config = TransferConfig(max_concurrency=10,
+                        multipart_threshold = 20 * MB)
+        self.bucket_name = bucket_name
+        self.prefix = prefix
+
+    def __len__(self):
+        return len(self.urls_list)
+
+    def __getitem__(self, idx):
+        filename = self.urls_list[idx]
+        print('downloading...')
+        filename = filename.replace('s3://' + self.bucket_name + '/', '')
+        fs = io.BytesIO()
+        s= boto3.client('s3')
+        s.download_fileobj(self.bucket_name,
+                                filename,
+                                fs,
+                                Config=self.config)
+
+        return self.urls_list[idx], fs.getvalue()
+
+class S3BotoIterableDataset(IterableDataset):
+    """Iterate over s3 dataset.
+    It handles some bookkeeping related to DataLoader.
+    """
+    def __init__(self, bucket_name, prefix, shuffle_urls=False):
+        url = 's3://' + bucket_name + '/' + prefix
+        self.handler = _pywrap_s3_io.S3Init()
+        self.urls_list = list()
+        self.urls_list.extend(self.handler.list_files(url))
+        print(self.urls_list)
+        self.epoch = 0
+        self.shuffle_urls = shuffle_urls
+
+        MB = 1024**2
+        self.config = TransferConfig(max_concurrency=10,
+                        multipart_threshold = 20 * MB)
+        self.bucket_name = bucket_name
+        self.prefix = prefix
+
+    @property
+    def shuffled_list(self):
+        if self.shuffle_urls:
+            random.seed(self.epoch)
+            return random.sample(self.urls_list, len(self.urls_list))
+        else:
+            return self.urls_list
+
+    def download_data(self, filename):
+        print('downloading...')
+        filename = filename.replace('s3://' + self.bucket_name + '/', '')
+        fs = io.BytesIO()
+        s= boto3.client('s3')
+        s.download_fileobj(self.bucket_name,
+                                filename,
+                                fs,
+                                Config=self.config)
+
+        file_content = fs.getvalue()
+        if filename[-3:] == "tar":
+            tarfile = tardata(file_content)
+            for fname, content in tarfile:
+                yield fname, content
+        elif filename[-3:] == "zip":
+            zipfile = zipdata(file_content)
+            for fname, content in zipfile:
+                yield fname, content
+        else:
+            yield filename, file_content
+
+    def get_stream(self, urls_list):
+        return chain.from_iterable(map(self.download_data, urls_list))
+
+    def worker_dist(self, urls):
+        if dist.is_initialized() :
+            world_size = dist.get_world_size()
+            rank = dist.get_rank()
+            total_size = len(urls)
+            urls = urls[rank:total_size:world_size]
+
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is not None:
+            wid = worker_info.id
+            num_workers = worker_info.num_workers
+            length = len(urls)
+            return urls[wid:length:num_workers]
+        else:
+            return urls
+
+    def __iter__(self):
+        urls = self.worker_dist(self.shuffled_list)
+        return self.get_stream(urls)
+
+    def __len__(self):
+        return len(self.urls_list)
+
+
+    def set_epoch(self, epoch):
+        self.epoch = epoch
