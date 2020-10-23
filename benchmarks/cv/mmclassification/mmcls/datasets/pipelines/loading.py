@@ -5,6 +5,7 @@ import numpy as np
 
 from ..builder import PIPELINES
 
+import sys
 
 @PIPELINES.register_module()
 class LoadImageFromFile(object):
@@ -33,6 +34,9 @@ class LoadImageFromFile(object):
         self.color_type = color_type
         self.file_client_args = file_client_args.copy()
         self.file_client = None
+        # print (self.color_type, to_float32)
+        # print ("Okay these are the values that are being set")
+        # sys.exit()
 
     def __call__(self, results):
         if self.file_client is None:
@@ -58,6 +62,8 @@ class LoadImageFromFile(object):
             mean=np.zeros(num_channels, dtype=np.float32),
             std=np.ones(num_channels, dtype=np.float32),
             to_rgb=False)
+        print ("This is the results dictionary", results)
+        sys.exit()
         return results
 
     def __repr__(self):

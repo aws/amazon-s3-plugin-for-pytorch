@@ -17,8 +17,7 @@ test_pipeline = [
     dict(type='CenterCrop', crop_size=224),
     dict(type='Normalize', **img_norm_cfg),
     dict(type='ImageToTensor', keys=['img']),
-    dict(type='ToTensor', keys=['gt_label']),
-    dict(type='Collect', keys=['img', 'gt_label'])
+    dict(type='Collect', keys=['img'])
 ]
 data = dict(
     samples_per_gpu=32,
@@ -38,4 +37,4 @@ data = dict(
         data_prefix='data/imagenet/val',
         ann_file='data/imagenet/meta/val.txt',
         pipeline=test_pipeline))
-evaluation = dict(interval=5, metric='accuracy')
+evaluation = dict(interval=1, metric='accuracy')

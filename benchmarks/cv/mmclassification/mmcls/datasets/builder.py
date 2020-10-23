@@ -86,6 +86,10 @@ def build_dataloader(dataset,
         worker_init_fn, num_workers=num_workers, rank=rank,
         seed=seed) if seed is not None else None
 
+    class_name = dataset.__class__.__name__
+    if class_name == "ImageNetS3":
+        shuffle = False
+
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
