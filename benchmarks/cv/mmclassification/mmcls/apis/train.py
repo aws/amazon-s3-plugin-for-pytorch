@@ -51,6 +51,7 @@ def train_model(model,
             num_gpus=len(cfg.gpu_ids),
             dist=distributed,
             round_up=True,
+            shuffle=False,
             seed=cfg.seed) for ds in dataset
     ]
 
