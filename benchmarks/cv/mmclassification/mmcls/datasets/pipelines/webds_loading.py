@@ -49,6 +49,7 @@ class LoadImageFromBytes(object):
         results['img'] = img
         results['img_shape'] = img.shape
         results['ori_shape'] = img.shape
+        results['__key__'] = np.array(results['__key__'], dtype=np.int64)
         results['gt_label'] = np.array(results['cls'], dtype=np.int64)
         num_channels = 1 if len(img.shape) < 3 else img.shape[2]
         results['img_norm_cfg'] = dict(

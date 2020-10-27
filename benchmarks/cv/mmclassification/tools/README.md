@@ -9,3 +9,7 @@
 2. execute_ddp.sh: Train model using PyTorch DDP. Note: This is not integrated in benchmarking framework yet. Can be used  
 to train model using PyTorch DDP. 
  
+## Changes
+1. Make shuffle false  benchmarks/cv/mmclassification/mmcls/apis/train.py line 54
+2. Length of the dataset - apis/train.py : line 54
+3. Commented 48 and 50 line /home/ubuntu/anaconda3/envs/open-mmlab/lib/python3.7/site-packages/mmcv/runner/hooks/logger/base.py

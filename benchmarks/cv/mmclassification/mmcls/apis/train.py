@@ -3,7 +3,7 @@ import random
 import numpy as np
 import torch
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
-from mmcv.runner import DistSamplerSeedHook, EpochBasedRunner, build_optimizer
+from mmcv.runner import DistSamplerSeedHook, EpochBasedRunner, IterBasedRunner, build_optimizer
 
 from mmcls.core import (DistEvalHook, DistOptimizerHook, EvalHook,
                         Fp16OptimizerHook)
@@ -71,12 +71,19 @@ def train_model(model,
 
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)
-    runner = EpochBasedRunner(
+    # runner = EpochBasedRunner(
+    #     model,
+    #     optimizer=optimizer,
+    #     work_dir=cfg.work_dir,
+    #     logger=logger,
+    #     meta=meta)
+    runner = IterBasedRunner(
         model,
         optimizer=optimizer,
         work_dir=cfg.work_dir,
         logger=logger,
         meta=meta)
+
     # an ugly walkaround to make the .log and .log.json filenames the same
     runner.timestamp = timestamp
 

@@ -20,20 +20,25 @@ test_pipeline = [
     dict(type='ToTensor', keys=['gt_label']),
     dict(type='Collect', keys=['img', 'gt_label'])
 ]
+urls_train= "s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{000000..001281}.tar"
+urls_train = f"pipe:aws s3 cp {urls_train} - || true"
+
+urls_val = "s3://mansmane-dev/imagenet_web_dataset/val/imagenet-val-{000000..000049}.tar"
+urls_val = f"pipe:aws s3 cp {urls_val} - || true"
 data = dict(
     samples_per_gpu=64,
-    workers_per_gpu=2,
+    workers_per_gpu=0,
     train=dict(
         type=dataset_type,
-        data_prefix='data/imagenet/train',
+        data_prefix=urls_train,
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        data_prefix='data/imagenet/val',
+        data_prefix=urls_val,
         pipeline=test_pipeline),
     test=dict(
         # replace `data/val` with `data/test` for standard test
         type=dataset_type,
-        data_prefix='data/imagenet/val',
+        data_prefix=urls_val,
         pipeline=test_pipeline))
 evaluation = dict(interval=1, metric='accuracy')
