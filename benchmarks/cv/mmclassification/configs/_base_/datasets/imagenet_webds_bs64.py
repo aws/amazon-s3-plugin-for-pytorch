@@ -22,23 +22,29 @@ test_pipeline = [
 ]
 urls_train= "s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{000000..001281}.tar"
 urls_train = f"pipe:aws s3 cp {urls_train} - || true"
+no_of_train_imgs = 1281167
 
 urls_val = "s3://mansmane-dev/imagenet_web_dataset/val/imagenet-val-{000000..000049}.tar"
 urls_val = f"pipe:aws s3 cp {urls_val} - || true"
+no_of_val_imgs = 50000
+
 data = dict(
     samples_per_gpu=64,
-    workers_per_gpu=0,
+    workers_per_gpu=2,
     train=dict(
         type=dataset_type,
         data_prefix=urls_train,
-        pipeline=train_pipeline),
+        pipeline=train_pipeline,
+        length=no_of_train_imgs//64),
     val=dict(
         type=dataset_type,
         data_prefix=urls_val,
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        length=no_of_val_imgs//64),
     test=dict(
         # replace `data/val` with `data/test` for standard test
         type=dataset_type,
         data_prefix=urls_val,
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        length=no_of_val_imgs//64))
 evaluation = dict(interval=1, metric='accuracy')
