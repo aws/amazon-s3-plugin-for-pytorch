@@ -70,6 +70,7 @@ def build_dataloader(dataset,
     Returns:
         DataLoader: A PyTorch dataloader.
     """
+    
     rank, world_size = get_dist_info()
     if dist:
         sampler = DistributedSampler(
@@ -82,13 +83,14 @@ def build_dataloader(dataset,
         batch_size = num_gpus * samples_per_gpu
         num_workers = num_gpus * workers_per_gpu
 
-    init_fn = partial(
-        worker_init_fn, num_workers=num_workers, rank=rank,
-        seed=seed) if seed is not None else None
-
     class_name = dataset.__class__.__name__
     if class_name == "ImageNetS3":
         shuffle = False
+        sampler = None
+
+    init_fn = partial(
+        worker_init_fn, num_workers=num_workers, rank=rank,
+        seed=seed) if seed is not None else None
 
     data_loader = DataLoader(
         dataset,

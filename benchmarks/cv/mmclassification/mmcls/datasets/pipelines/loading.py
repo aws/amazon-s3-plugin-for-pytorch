@@ -62,8 +62,8 @@ class LoadImageFromFile(object):
             mean=np.zeros(num_channels, dtype=np.float32),
             std=np.ones(num_channels, dtype=np.float32),
             to_rgb=False)
-        print ("This is the results dictionary", results)
-        sys.exit()
+        #print ("This is the results dictionary", results)
+        #sys.exit()
         return results
 
     def __repr__(self):

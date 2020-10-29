@@ -10,8 +10,6 @@ from .builder import DATASETS
 from .s3dataset import S3IterableDataset
 
 from .pipelines import Compose
-from mmcls.models.losses import accuracy
-
 
 """
 !!! Remove the below comment later on
@@ -1038,9 +1036,9 @@ class ImageNetS3(IterableDataset):
     ]
 
     def __init__(self, data_prefix, pipeline, ann_file=None, test_mode=False):
-        self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(filenum).zfill(6)) for filenum in range(299)]
-        # self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(0).zfill(6))]
-        # self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/"]
+        #url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(filenum).zfill(6)) for filenum in range(299)]
+        url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(0).zfill(6))]
+        self.s3_iter_dataset = iter(S3IterableDataset(url_list, shuffle_urls=True))
         self.pipeline = Compose(pipeline)
         self.test_mode = test_mode
         self.gt_labels = [] # Required only at test time
@@ -1051,31 +1049,11 @@ class ImageNetS3(IterableDataset):
         compatibility with mmcv
     """
     def __len__(self):
-        return 1281167
+        return 100000
 
-    def imagenet_generator(self):
-        try:
-            while True:
-                label_fname, label_fobj = next(self.s3_iter_dataset_iterator)
-                image_fname, image_fobj = next(self.s3_iter_dataset_iterator)
-
-                # print (label_fname, image_fname)
-
-                label = int(label_fobj)
-                self.gt_labels.append(np.array(label))
-                # print ("These are the loaded lables")
-                # print (self.gt_labels)
-
-                pipeline_input = self.make_pipeline_ready(label, image_fname, image_fobj)
-                yield self.pipeline(pipeline_input)
-
-        except StopIteration:
-            raise StopIteration
 
     def __iter__(self):
-        self.s3_iter_dataset = S3IterableDataset(self.url_list, shuffle_urls=True)
-        self.s3_iter_dataset_iterator = iter(self.s3_iter_dataset)
-        return self.imagenet_generator()
+        return self
     
     """
     Very Strong Assumption here:
@@ -1083,21 +1061,21 @@ class ImageNetS3(IterableDataset):
         is second. 
         Current - webdataset compatible tar file - has this sturcture
     """
-    # def __next__(self):
-    #     try:
-    #         label_fname, label_fobj = next(self.s3_iter_dataset_iterator)
-    #         image_fname, image_fobj = next(self.s3_iter_dataset_iterator)
+    def __next__(self):
+        try:
+            label_fname, label_fobj = next(self.s3_iter_dataset_iterator)
+            image_fname, image_fobj = next(self.s3_iter_dataset_iterator)
 
-    #         # print (label_fname, image_fname)
+            # print (label_fname, image_fname)
 
-    #         label = int(label_fobj)
-    #         self.gt_labels.append(np.array(label))
+            label = int(label_fobj)
+            self.gt_labels.append(np.array(label))
 
-    #         pipeline_input = self.make_pipeline_ready(label, image_fname, image_fobj)
-    #         return self.pipeline(pipeline_input)
+            pipeline_input = self.make_pipeline_ready(label, image_fname, image_fobj)
+            return self.pipeline(pipeline_input)
 
-    #     except StopIteration:
-    #         raise StopIteration
+        except StopIteration:
+            raise StopIteration
 
     """
     Creates the result object that is returned by loading.py:LoadImageFromFile 
@@ -1162,11 +1140,8 @@ class ImageNetS3(IterableDataset):
         if metric == 'accuracy':
             topk = metric_options.get('topk')
             results = np.vstack(results)
-            gt_labels = np.array(self.gt_labels)
+            gt_labels = np.array(self.get_gt_labels())
             num_imgs = len(results)
-            print (gt_labels)
-            print ("Number of images", num_imgs)
-            print ("Number of labels", len(gt_labels))
             assert len(gt_labels) == num_imgs
             acc = accuracy(results, gt_labels, topk)
             eval_results = {f'top-{k}': a.item() for k, a in zip(topk, acc)}

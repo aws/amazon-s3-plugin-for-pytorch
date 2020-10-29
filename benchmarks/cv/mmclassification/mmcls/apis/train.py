@@ -1,3 +1,4 @@
+import sys
 import random
 import warnings
 
@@ -69,6 +70,7 @@ def train_model(model,
         model = MMDataParallel(
             model.cuda(cfg.gpu_ids[0]), device_ids=cfg.gpu_ids)
 
+
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)
 
@@ -80,6 +82,7 @@ def train_model(model,
         warnings.warn(
             'config is now expected to have a `runner` section, '
             'please set `runner` in your config.', UserWarning)
+
 
     runner = build_runner(
         cfg.runner,
