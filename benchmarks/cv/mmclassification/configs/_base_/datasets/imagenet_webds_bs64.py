@@ -49,4 +49,4 @@ data = dict(
         data_prefix=urls_val,
         pipeline=test_pipeline,
         length=no_of_val_imgs//64))
-evaluation = dict(interval=1, metric='accuracy')
+evaluation = dict(interval=100000, metric='accuracy')
