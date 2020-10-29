@@ -28,8 +28,9 @@ urls_val = "s3://mansmane-dev/imagenet_web_dataset/val/imagenet-val-{000000..000
 urls_val = f"pipe:aws s3 cp {urls_val} - || true"
 no_of_val_imgs = 50000
 
+samples_per_gpu= 64
 data = dict(
-    samples_per_gpu=64,
+    samples_per_gpu=samples_per_gpu,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type,
@@ -41,6 +42,7 @@ data = dict(
         data_prefix=urls_val,
         pipeline=test_pipeline,
         length=no_of_val_imgs//64),
+
     test=dict(
         # replace `data/val` with `data/test` for standard test
         type=dataset_type,

@@ -9,4 +9,4 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=2500,
     warmup_ratio=0.25)
-total_epochs = 10000
+total_epochs = 500
