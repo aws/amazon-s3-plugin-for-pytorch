@@ -13,3 +13,4 @@ to train model using PyTorch DDP.
 1. Make shuffle false  benchmarks/cv/mmclassification/mmcls/apis/train.py line 54
 2. Length of the dataset - apis/train.py : line 54
 3. Commented 48 and 50 line /home/ubuntu/anaconda3/envs/open-mmlab/lib/python3.7/site-packages/mmcv/runner/hooks/logger/base.py
+4. /home/ubuntu/anaconda3/envs/open-mmlab/lib/python3.7/site-packages/mmcv/runner/hooks/sampler_seed.py Commment

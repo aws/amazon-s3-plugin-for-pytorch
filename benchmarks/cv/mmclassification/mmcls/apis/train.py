@@ -42,6 +42,18 @@ def train_model(model,
     # prepare data loaders
     dataset = dataset if isinstance(dataset, (list, tuple)) else [dataset]
 
+    # data_loaders = [
+    #     build_dataloader(
+    #         ds,
+    #         samples_per_gpu= samples_per_gpu,
+    #         workers_per_gpu=cfg.data.workers_per_gpu,
+    #         # cfg.gpus will be ignored if distributed
+    #         num_gpus=len(cfg.gpu_ids),
+    #         dist=distributed,
+    #         round_up=True,
+    #         shuffle=False,
+    #         seed=cfg.seed) for ds in dataset
+    # ]
     data_loaders = [
         build_dataloader(
             ds,
@@ -71,6 +83,7 @@ def train_model(model,
 
     # build runner
     optimizer = build_optimizer(model, cfg.optimizer)
+    # Use this for non-iterable dataset
     # runner = EpochBasedRunner(
     #     model,
     #     optimizer=optimizer,
@@ -107,6 +120,13 @@ def train_model(model,
     # register eval hooks
     if validate:
         val_dataset = build_dataset(cfg.data.val, dict(test_mode=True))
+        # val_dataloader = build_dataloader(
+        #     val_dataset,
+        #     samples_per_gpu=None,
+        #     workers_per_gpu=cfg.data.workers_per_gpu,
+        #     dist=distributed,
+        #     shuffle=False,
+        #     round_up=False)
         val_dataloader = build_dataloader(
             val_dataset,
             samples_per_gpu=cfg.data.samples_per_gpu,
