@@ -1038,7 +1038,7 @@ class ImageNetS3(IterableDataset):
     ]
 
     def __init__(self, data_prefix, pipeline, ann_file=None, test_mode=False):
-        self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(filenum).zfill(6)) for filenum in range(299)]
+        self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(filenum).zfill(6)) for filenum in range(1282)]
         # self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-{}.tar".format(str(0).zfill(6))]
         # self.url_list = ["s3://mansmane-dev/imagenet_web_dataset/train/"]
         self.pipeline = Compose(pipeline)
