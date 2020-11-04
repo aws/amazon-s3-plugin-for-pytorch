@@ -1044,14 +1044,6 @@ class ImageNetS3(IterableDataset):
         self.pipeline = Compose(pipeline)
         self.test_mode = test_mode
         self.gt_labels = [] # Required only at test time
-    """
-        mmcv requires this and this is present for map-style datasets
-        ImageNetS3 is a iterable-style dataset
-        But, just hardcoding this value based on imagenet for backward 
-        compatibility with mmcv
-    """
-    def __len__(self):
-        return 1281167
 
     def imagenet_generator(self):
         try:
