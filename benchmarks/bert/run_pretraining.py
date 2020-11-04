@@ -77,9 +77,9 @@ def create_data_file(fileobj):
 class s3_dataset(IterableDataset):
 
     def __init__(self, phase2, max_pred_length):
-        self.s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
+        self.s3_directory = "s3://choidong-bert/tiny/phase1/training/wiki_books_corpus_training"
         if phase2:
-            self.s3_directory = "s3://choidong-bert/phase2/training/wiki_books_corpus_training"
+            self.s3_directory = "s3://choidong-bert/tiny/phase2/training/wiki_books_corpus_training"
         self.max_pred_length = max_pred_length
 
     def data_generator(self):
@@ -471,9 +471,6 @@ def main():
 
         pool = ProcessPoolExecutor(1)
 
-        train_dataset = s3_dataset(phase2=args.phase2, max_pred_length=args.max_predictions_per_seq)
-        train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, pin_memory=True)
-
         overflow_buf = None
         if args.allreduce_post_accumulation:
             overflow_buf = torch.cuda.IntTensor([0])
@@ -482,6 +479,8 @@ def main():
         while epoch < args.num_train_epochs:
             logger.info("EPOCH NUMBER %s" % epoch)
             f_id = 1
+            train_dataset = s3_dataset(phase2=args.phase2, max_pred_length=args.max_predictions_per_seq)
+            train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, pin_memory=True)
             for train_file in train_dataloader:
                 filename, pretrain_data = train_file[0]
                 pretrain_sampler = RandomSampler(pretrain_data)
@@ -536,8 +535,7 @@ def main():
                                                                                                 'lr']))
                         average_loss = 0
 
-                    if epoch >= args.num_train_epochs or training_steps % (
-                            args.num_steps_per_checkpoint * args.gradient_accumulation_steps) == 0:
+                    if training_steps % (args.num_steps_per_checkpoint * args.gradient_accumulation_steps) == 0:
                         if is_main_process():
                             # Save a trained model
                             logger.info("** ** * Saving fine - tuned model ** ** * ")
