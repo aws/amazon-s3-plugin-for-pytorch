@@ -72,7 +72,13 @@ def build_dataloader(dataset,
     """
     
     rank, world_size = get_dist_info()
-    if dist:
+    class_name = dataset.__class__.__name__
+    if class_name == "ImageNetS3":
+        shuffle = False
+        sampler = None
+        batch_size = samples_per_gpu
+        num_workers = workers_per_gpu
+    elif dist:
         sampler = DistributedSampler(
             dataset, world_size, rank, shuffle=shuffle, round_up=round_up)
         shuffle = False
@@ -83,10 +89,6 @@ def build_dataloader(dataset,
         batch_size = num_gpus * samples_per_gpu
         num_workers = num_gpus * workers_per_gpu
 
-    class_name = dataset.__class__.__name__
-    if class_name == "ImageNetS3":
-        shuffle = False
-        sampler = None
 
     init_fn = partial(
         worker_init_fn, num_workers=num_workers, rank=rank,
