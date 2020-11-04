@@ -253,7 +253,6 @@ class S3BotoIterableDataset(IterableDataset):
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
         self.urls_list.extend(self.handler.list_files(url))
-        print(self.urls_list)
         self.epoch = 0
         self.shuffle_urls = shuffle_urls
 
