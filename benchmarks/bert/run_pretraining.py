@@ -30,7 +30,7 @@ import h5py
 from tqdm import tqdm, trange
 import numpy as np
 import torch
-from torch.utils.data import DataLoader, Dataset, IterableDataset, RandomSampler
+from torch.utils.data import IterableDataset, DataLoader
 import math
 from apex import amp
 import multiprocessing
@@ -63,7 +63,7 @@ logging.basicConfig(format='%(asctime)s - %(levelname)s - %(name)s -   %(message
 logger = logging.getLogger(__name__)
 
 
-def create_data_file(fileobj):
+def create_data_samples_from_file(fileobj):
 
     keys = ['input_ids', 'input_mask', 'segment_ids', 'masked_lm_positions', 'masked_lm_ids', 'next_sentence_labels']
     dataset = io.BytesIO(fileobj)
@@ -73,6 +73,22 @@ def create_data_file(fileobj):
         data_file = [np.asarray(f[key][:]) for key in keys]
 
     return data_file
+
+def format_sample(sample, max_pred_length):
+        [input_ids, input_mask, segment_ids, masked_lm_positions, masked_lm_ids, next_sentence_labels] = [
+            torch.from_numpy(input.astype(np.int64)) if indice < 5 else torch.from_numpy(
+                np.asarray(input.astype(np.int64))) for indice, input in enumerate(sample)]
+
+        masked_lm_labels = torch.ones(input_ids.shape, dtype=torch.long) * -1
+        index = max_pred_length
+        # store number of  masked tokens in index
+        padded_mask_indices = (masked_lm_positions == 0).nonzero()
+        if len(padded_mask_indices) != 0:
+            index = padded_mask_indices[0].item()
+        masked_lm_labels[masked_lm_positions[:index]] = masked_lm_ids[:index]
+
+        return [input_ids, segment_ids, input_mask,
+                masked_lm_labels, next_sentence_labels]
 
 class s3_dataset(IterableDataset):
 
@@ -86,9 +102,14 @@ class s3_dataset(IterableDataset):
         try:
             while True:
                 filename, fileobj = next(self.dataset_iter)
-                data_file = create_data_file(fileobj)
-                train_dataset = pretraining_dataset(data_file=data_file, max_pred_length=self.max_pred_length)
-                yield filename, train_dataset
+                data_samples = create_data_samples_from_file(fileobj)
+                data_sample_transpose = list(zip(*data_samples))
+                random.shuffle(data_sample_transpose)
+                # num_samples = len(data_samples[0])
+                print(f"rank : {torch.distributed.get_rank()}, filename : {filename}")
+                for sample in data_sample_transpose:
+                    formatted_sample = format_sample(sample, self.max_pred_length)
+                    yield formatted_sample
 
         except StopIteration as e:
             raise e
@@ -97,41 +118,6 @@ class s3_dataset(IterableDataset):
         self.dataset = S3IterableDataset(self.s3_directory, shuffle_urls=True)
         self.dataset_iter = iter(self.dataset)
         return self.data_generator()
-
-class pretraining_dataset(Dataset):
-
-    def __init__(self, data_file, max_pred_length):
-        self.inputs = data_file
-        self.max_pred_length = max_pred_length
-
-    def __len__(self):
-        'Denotes the total number of samples'
-        return len(self.inputs[0])
-
-    def __getitem__(self, index):
-
-        [input_ids, input_mask, segment_ids, masked_lm_positions, masked_lm_ids, next_sentence_labels] = [
-            torch.from_numpy(input[index].astype(np.int64)) if indice < 5 else torch.from_numpy(
-                np.asarray(input[index].astype(np.int64))) for indice, input in enumerate(self.inputs)]
-
-        masked_lm_labels = torch.ones(input_ids.shape, dtype=torch.long) * -1
-        index = self.max_pred_length
-        # store number of  masked tokens in index
-        padded_mask_indices = (masked_lm_positions == 0).nonzero()
-        if len(padded_mask_indices) != 0:
-            index = padded_mask_indices[0].item()
-        masked_lm_labels[masked_lm_positions[:index]] = masked_lm_ids[:index]
-
-        return [input_ids, segment_ids, input_mask,
-                masked_lm_labels, next_sentence_labels]
-
-def collate_fn(batch):
-    """
-    batch: list of tuples (s3 directory to file, dataloader from single file)
-    """
-    # filename, dataloader = zip(*batch)
-    # return filename, dataloader
-    return batch
 
 def parse_arguments():
 
@@ -469,8 +455,6 @@ def main():
         epoch = 0
         training_steps = 0
 
-        pool = ProcessPoolExecutor(1)
-
         overflow_buf = None
         if args.allreduce_post_accumulation:
             overflow_buf = torch.cuda.IntTensor([0])
@@ -478,90 +462,67 @@ def main():
         # Note: We loop infinitely over epochs, termination is handled via iteration count
         while epoch < args.num_train_epochs:
             logger.info("EPOCH NUMBER %s" % epoch)
-            f_id = 1
             train_dataset = s3_dataset(phase2=args.phase2, max_pred_length=args.max_predictions_per_seq)
-            train_dataloader = DataLoader(train_dataset, collate_fn=collate_fn, pin_memory=True)
-            for train_file in train_dataloader:
-                filename, pretrain_data = train_file[0]
-                pretrain_sampler = RandomSampler(pretrain_data)
-                pretrain_dataloader = DataLoader(pretrain_data, sampler=pretrain_sampler,
-                                                 batch_size=args.train_batch_size * args.n_gpu, num_workers=4,
-                                                 pin_memory=True)
-                train_iter = tqdm(pretrain_dataloader, desc="Iteration") if is_main_process() else pretrain_dataloader
-                logger.info("file no %s file %s" % (f_id, filename))
-                for _, batch in enumerate(train_iter):
+            train_dataloader = DataLoader(train_dataset, pin_memory=True)
+            train_iter = tqdm(train_dataloader, desc="Iteration") if is_main_process() else train_dataloader
+            for step, sample in enumerate(train_iter):
+                training_steps += 1
+                sample = [elem.to(device) for elem in sample]
+                input_ids, segment_ids, input_mask, masked_lm_labels, next_sentence_labels = sample
+                loss = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask,
+                            masked_lm_labels=masked_lm_labels, next_sentence_label=next_sentence_labels,
+                            checkpoint_activations=args.checkpoint_activations)
+                if args.n_gpu > 1:
+                    loss = loss.mean()  # mean() to average on multi-gpu.
 
-                    training_steps += 1
-                    batch = [t.to(device) for t in batch]
-                    input_ids, segment_ids, input_mask, masked_lm_labels, next_sentence_labels = batch
-                    loss = model(input_ids=input_ids, token_type_ids=segment_ids, attention_mask=input_mask,
-                                    masked_lm_labels=masked_lm_labels, next_sentence_label=next_sentence_labels,
-                                    checkpoint_activations=args.checkpoint_activations)
-                    if args.n_gpu > 1:
-                        loss = loss.mean()  # mean() to average on multi-gpu.
+                divisor = args.gradient_accumulation_steps
+                if args.gradient_accumulation_steps > 1:
+                    if not args.allreduce_post_accumulation:
+                        # this division was merged into predivision
+                        loss = loss / args.gradient_accumulation_steps
+                        divisor = 1.0
+                if args.fp16:
+                    with amp.scale_loss(loss, optimizer, delay_overflow_check=args.allreduce_post_accumulation) as scaled_loss:
+                        scaled_loss.backward()
+                else:
+                    loss.backward()
+                average_loss += loss.item()
 
-                    divisor = args.gradient_accumulation_steps
-                    if args.gradient_accumulation_steps > 1:
-                        if not args.allreduce_post_accumulation:
-                            # this division was merged into predivision
-                            loss = loss / args.gradient_accumulation_steps
-                            divisor = 1.0
-                    if args.fp16:
-                        with amp.scale_loss(loss, optimizer, delay_overflow_check=args.allreduce_post_accumulation) as scaled_loss:
-                            scaled_loss.backward()
-                    else:
-                        loss.backward()
-                    average_loss += loss.item()
+                if training_steps % args.gradient_accumulation_steps == 0:
+                    global_step = take_optimizer_step(args, optimizer, model, overflow_buf, global_step)
 
-                    if training_steps % args.gradient_accumulation_steps == 0:
-                        global_step = take_optimizer_step(args, optimizer, model, overflow_buf, global_step)
+                if global_step >= args.max_steps:
+                    last_num_steps = global_step % args.log_freq
+                    last_num_steps = args.log_freq if last_num_steps == 0 else last_num_steps
+                    average_loss = torch.tensor(average_loss, dtype=torch.float32).cuda()
+                    average_loss = average_loss / (last_num_steps * divisor)
+                    if (torch.distributed.is_initialized()):
+                        average_loss /= torch.distributed.get_world_size()
+                        torch.distributed.all_reduce(average_loss)
+                    if is_main_process():
+                        logger.info("Total Steps:{} Final Loss = {}".format(training_steps, average_loss.item()))
+                elif training_steps % (args.log_freq * args.gradient_accumulation_steps) == 0:
+                    if is_main_process():
+                        print("Step:{} Average Loss = {} Step Loss = {} LR {}".format(global_step, average_loss / (
+                                    args.log_freq * divisor), loss.item() * args.gradient_accumulation_steps / divisor,
+                                    optimizer.param_groups[0]['lr']))
+                    average_loss = 0
 
-                    if global_step >= args.max_steps:
-                        last_num_steps = global_step % args.log_freq
-                        last_num_steps = args.log_freq if last_num_steps == 0 else last_num_steps
-                        average_loss = torch.tensor(average_loss, dtype=torch.float32).cuda()
-                        average_loss = average_loss / (last_num_steps * divisor)
-                        if (torch.distributed.is_initialized()):
-                            average_loss /= torch.distributed.get_world_size()
-                            torch.distributed.all_reduce(average_loss)
-                        if is_main_process():
-                            logger.info("Total Steps:{} Final Loss = {}".format(training_steps, average_loss.item()))
-                    elif training_steps % (args.log_freq * args.gradient_accumulation_steps) == 0:
-                        if is_main_process():
-                            print("Step:{} Average Loss = {} Step Loss = {} LR {}".format(global_step, average_loss / (
-                                        args.log_freq * divisor),
-                                                                                            loss.item() * args.gradient_accumulation_steps / divisor,
-                                                                                            optimizer.param_groups[0][
-                                                                                                'lr']))
-                        average_loss = 0
-
-                    if training_steps % (args.num_steps_per_checkpoint * args.gradient_accumulation_steps) == 0:
-                        if is_main_process():
-                            # Save a trained model
-                            logger.info("** ** * Saving fine - tuned model ** ** * ")
-                            model_to_save = model.module if hasattr(model,
-                                                                    'module') else model  # Only save the model it-self
-                            if args.resume_step < 0 or not args.phase2:
-                                output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step))
-                            else:
-                                output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step + args.phase1_end_step))
-                            if args.do_train:
-                                torch.save({'model': model_to_save.state_dict(),
-                                            'optimizer': optimizer.state_dict(),
-                                            'master params': list(amp.master_params(optimizer))},
-                                             output_save_file)
-
-                                most_recent_ckpts_paths.append(output_save_file)
-                                if len(most_recent_ckpts_paths) > 3:
-                                    ckpt_to_be_removed = most_recent_ckpts_paths.pop(0)
-                                    os.remove(ckpt_to_be_removed)
-
-                # Make sure pool has finished and switch train_dataloader
-                # NOTE: Will block until complete
-                f_id += 1
-
+            if is_main_process():
+                # Save last trained_model in epoch
+                logger.info(f"** ** * Saving model at end of epoch {epoch} ** ** * ")
+                model_to_save = model.module if hasattr(model,'module') else model  # Only save the model it-self
+                if args.resume_step < 0 or not args.phase2:
+                    output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step))
+                else:
+                    output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step + args.phase1_end_step))
+                if args.do_train:
+                    torch.save({'model': model_to_save.state_dict(),
+                                'optimizer': optimizer.state_dict(),
+                                'master params': list(amp.master_params(optimizer))},
+                                 output_save_file)
             epoch += 1
-    del train_dataloader
+            del train_dataloader
     return args
 
 
