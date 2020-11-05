@@ -220,7 +220,6 @@ class S3BotoSet(Dataset):
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
         self.urls_list.extend(self.handler.list_files(url))
-        print(self.urls_list)
 
         MB = 1024**2
         self.config = TransferConfig(max_concurrency=10,

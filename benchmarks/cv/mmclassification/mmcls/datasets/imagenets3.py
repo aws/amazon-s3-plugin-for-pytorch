@@ -7,7 +7,7 @@ from torch.utils.data import IterableDataset
 import mmcv
 
 from .builder import DATASETS
-from .s3dataset import S3IterableDataset
+from .s3dataset import S3IterableDataset, S3BotoIterableDataset
 
 from .pipelines import Compose
 from mmcls.models.losses import accuracy
@@ -1042,6 +1042,8 @@ class ImageNetS3(IterableDataset):
         self.pipeline = Compose(pipeline)
         self.test_mode = test_mode
         self.gt_labels = [] # Required only at test time
+        self.bucket_name = "mansmane-dev"
+        self.prefix = "imagenet_web_dataset/train"
 
     def imagenet_generator(self):
         try:
@@ -1063,7 +1065,8 @@ class ImageNetS3(IterableDataset):
             raise StopIteration
 
     def __iter__(self):
-        self.s3_iter_dataset = S3IterableDataset(self.url_list)
+        #self.s3_iter_dataset = S3IterableDataset(self.url_list)
+        self.s3_iter_dataset = S3BotoIterableDataset(self.bucket_name, self.prefix)
         self.s3_iter_dataset_iterator = iter(self.s3_iter_dataset)
         return self.imagenet_generator()
     
