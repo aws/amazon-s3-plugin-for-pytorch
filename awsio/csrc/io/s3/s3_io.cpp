@@ -29,7 +29,7 @@ namespace awsio {
 namespace {
 // static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
 static const size_t s3ReadBufferSize = 120 * 1024 * 1024;               // 16 MB
-static const uint64_t s3MultiPartDownloadChunkSize = 10 * 1024 * 1024;  // 50 MB
+static const uint64_t s3MultiPartDownloadChunkSize = 50 * 1024 * 1024;  // 50 MB
 static const int downloadRetries = 3;
 static const int64_t s3TimeoutMsec = 300000;
 static const int executorPoolSize = 25;
