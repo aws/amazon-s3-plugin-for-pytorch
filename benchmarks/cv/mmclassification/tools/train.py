@@ -7,6 +7,7 @@ import sys
 sys.path.append(os.getcwd()) 
 sys.path.append( '.' )
 sys.path.append( osp.join(os.getcwd(),'../' ) )
+import time
 
 import mmcv
 import torch
@@ -18,6 +19,7 @@ from mmcls.apis import set_random_seed, train_model
 from mmcls.datasets import build_dataset
 from mmcls.models import build_classifier
 from mmcls.utils import collect_env, get_root_logger
+from mmcv.runner import get_dist_info
 
 
 def parse_args():
@@ -73,6 +75,9 @@ def parse_args():
 
 
 def main():
+    rank, world_size = get_dist_info()
+    if rank==0:
+        start_time = time.time()
     args = parse_args()
 
     cfg = Config.fromfile(args.config)
@@ -178,7 +183,8 @@ def main():
         validate=(not args.no_validate),
         timestamp=timestamp,
         meta=meta)
-
+    if rank == 0:
+        print('Total time taken {}'.format(time.time()-start_time))
 
 if __name__ == '__main__':
     main()

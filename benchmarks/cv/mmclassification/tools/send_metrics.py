@@ -163,17 +163,6 @@ def main():
             pass
 
     print("Data: ", Data)
-    try:
-        response = cloudwatch.put_metric_data(
-            MetricData=Data,
-            Namespace=namespace
-        )
-        print("Sent metrics to CloudWatch!")
-    except Exception as e:
-        print(e)
-        print(response)
-        print("Failed to send metrics to CloudWatch!")
-
 
 if __name__ == '__main__':
     main()
