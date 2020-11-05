@@ -7,6 +7,7 @@ from time import time
 
 from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
 import h5py # must be version 2.9.0 or newer
+from torch.utils.data import IterableDataset, DataLoader
 
 def fileobj_to_np_list(fileobj, is_s3=True):
     KEYS = ['input_ids', 'input_mask', 'segment_ids', 'masked_lm_positions', 'masked_lm_ids', 'next_sentence_labels']
@@ -72,8 +73,43 @@ def test_s3iterable(s3_path, num_samples=5):
         assert all ([np.allclose(s3_elem, boto3_elem) for s3_elem, boto3_elem in zip (s3_result, boto3_result)])
     print("Average time for S3IterableDataset :", total_time / num_samples)
 
+class s3_dataset(IterableDataset):
+    def __init__(self, path):
+        self.s3_directory=path
+
+    def file_generator(self):
+        try:
+            while True:
+                filename, fileobj = next(self.dataset_iter)
+                data_samples = fileobj_to_np_list(fileobj, is_s3=True)
+                data_samples_transpose = list(zip(*data_samples))
+                count = 0
+                for data in data_samples_transpose:
+                    if count % 10000 == 0:
+                        print(count, filename)
+                    count += 1
+                    yield data
+        except StopIteration as e:
+            raise e
+
+    def __iter__(self):
+        self.dataset = S3IterableDataset(self.s3_directory)
+        self.dataset_iter = iter(self.dataset)
+        return self.file_generator()
+                
+def test_iterable_generator(s3_path):
+    dataset = s3_dataset(s3_path)
+    train_dataloader = DataLoader(dataset, pin_memory=True)
+    count = 0
+    for data in train_dataloader:
+        if count % 1000 == 0:
+            print(type(data))
+        count += 1
+
+
 if __name__ == '__main__':
     s3_path = 's3://choidong-bert/phase1/training/wiki_books_corpus_training'
     test_s3dataset(s3_path)
     test_s3iterable(s3_path)
+    test_iterable_generator(s3_path)
 
