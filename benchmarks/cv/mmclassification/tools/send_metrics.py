@@ -125,12 +125,12 @@ def main():
     stats = get_metrics(json_logs, args.num_gpus, args.epoch_num, model, suffix, batch_size)
 
     stats["Total Time" + suffix] = {}
-    stats["Total Time" + suffix]["Unit"] = "Seconds"
-    stats["Total Time" + suffix]["Value"] = _get_time(work_dir)
+    stats["Total Time" + suffix]["Unit"] = "Minutes"
+    stats["Total Time" + suffix]["Value"] = _get_time(work_dir) /60.0
 
     stats["Time per Epoch" + suffix] = {}
-    stats["Time per Epoch" + suffix]["Unit"] = "Seconds"
-    stats["Time per Epoch" + suffix]["Value"] = stats["Total Time"]["Value"] / args.epoch_num
+    stats["Time per Epoch" + suffix]["Unit"] = "Minutes"
+    stats["Time per Epoch" + suffix]["Value"] = stats["Total Time"]["Value"] / (args.epoch_num)
     print(stats)
 
     cloudwatch = boto3.client('cloudwatch', region_name='us-west-2')
