@@ -8,6 +8,7 @@ import torch.distributed as dist
 import _pywrap_s3_io
 import random
 from itertools import chain
+from time import sleep
 
 meta_prefix = "__"
 meta_suffix = "__"
@@ -141,14 +142,18 @@ class S3IterableDataset(IterableDataset):
     def download_data(self, filename):
         if filename[-3:] == "tar":
             tarfile = tardata(self.handler.s3_read(filename))
+            sleep(0.3)
             for fname, content in tarfile:
                 yield fname, content
         elif filename[-3:] == "zip":
             zipfile = zipdata(self.handler.s3_read(filename))
+            sleep(0.3)
             for fname, content in zipfile:
                 yield fname, content
         else:
-            yield filename, self.handler.s3_read(filename)
+            read_file = self.handler.s3_read(filename)
+            sleep(0.3)
+            yield filename, read_file
 
     def get_stream(self, urls_list):
         return chain.from_iterable(map(self.download_data, urls_list))
