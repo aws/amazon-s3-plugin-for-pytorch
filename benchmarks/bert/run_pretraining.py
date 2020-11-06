@@ -106,7 +106,7 @@ class s3_dataset(IterableDataset):
                 data_sample_transpose = list(zip(*data_samples))
                 random.shuffle(data_sample_transpose)
                 # truncating data to run 1 epoch in 2 hours
-                truncated_idx = len(data_sample_transpose) // 20
+                truncated_idx = len(data_sample_transpose) // 100
                 data_sample_transpose = data_sample_transpose[:truncated_idx]
                 print(f"rank : {torch.distributed.get_rank()}, filename : {filename}")
                 for sample in data_sample_transpose:
@@ -492,17 +492,7 @@ def main():
                 if training_steps % args.gradient_accumulation_steps == 0:
                     global_step = take_optimizer_step(args, optimizer, model, overflow_buf, global_step)
 
-                if global_step >= args.max_steps:
-                    last_num_steps = global_step % args.log_freq
-                    last_num_steps = args.log_freq if last_num_steps == 0 else last_num_steps
-                    average_loss = torch.tensor(average_loss, dtype=torch.float32).cuda()
-                    average_loss = average_loss / (last_num_steps * divisor)
-                    if (torch.distributed.is_initialized()):
-                        average_loss /= torch.distributed.get_world_size()
-                        torch.distributed.all_reduce(average_loss)
-                    if is_main_process():
-                        logger.info("Total Steps:{} Final Loss = {}".format(training_steps, average_loss.item()))
-                elif training_steps % (args.log_freq * args.gradient_accumulation_steps) == 0:
+                if training_steps % (args.log_freq * args.gradient_accumulation_steps) == 0:
                     if is_main_process():
                         print("Step:{} Average Loss = {} Step Loss = {} LR {}".format(global_step, average_loss / (
                                     args.log_freq * divisor), loss.item() * args.gradient_accumulation_steps / divisor,
@@ -511,30 +501,6 @@ def main():
 
             epoch += 1
 
-        if epoch >= args.num_train_epochs:
-            last_num_steps = global_step % args.log_freq
-            last_num_steps = args.log_freq if last_num_steps == 0 else last_num_steps
-            average_loss = torch.tensor(average_loss, dtype=torch.float32).cuda()
-            average_loss = average_loss / (last_num_steps * divisor)
-            if (torch.distributed.is_initialized()):
-                average_loss /= torch.distributed.get_world_size()
-                torch.distributed.all_reduce(average_loss)
-            if is_main_process():
-                logger.info("Total Steps:{} Final Loss = {}".format(training_steps, average_loss.item()))
-
-        if is_main_process():
-            # Save last trained_model in epoch
-            logger.info(f"** ** * Saving model at end of epoch {epoch} ** ** * ")
-            model_to_save = model.module if hasattr(model,'module') else model  # Only save the model it-self
-            if args.resume_step < 0 or not args.phase2:
-                output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step))
-            else:
-                output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step + args.phase1_end_step))
-            if args.do_train:
-                torch.save({'model': model_to_save.state_dict(),
-                            'optimizer': optimizer.state_dict(),
-                            'master params': list(amp.master_params(optimizer))},
-                            output_save_file)
     return args
 
 
