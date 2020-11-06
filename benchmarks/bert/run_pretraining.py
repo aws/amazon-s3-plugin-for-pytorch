@@ -93,9 +93,9 @@ def format_sample(sample, max_pred_length):
 class s3_dataset(IterableDataset):
 
     def __init__(self, phase2, max_pred_length):
-        self.s3_directory = "s3://choidong-bert/tiny/phase1/training/wiki_books_corpus_training"
+        self.s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
         if phase2:
-            self.s3_directory = "s3://choidong-bert/tiny/phase2/training/wiki_books_corpus_training"
+            self.s3_directory = "s3://choidong-bert/phase2/training/wiki_books_corpus_training"
         self.max_pred_length = max_pred_length
 
     def data_generator(self):
@@ -106,7 +106,7 @@ class s3_dataset(IterableDataset):
                 data_sample_transpose = list(zip(*data_samples))
                 random.shuffle(data_sample_transpose)
                 # truncating data to run 1 epoch in 2 hours
-                truncated_idx = len(data_sample_transpose) // 100
+                truncated_idx = len(data_sample_transpose) // 1000
                 data_sample_transpose = data_sample_transpose[:truncated_idx]
                 print(f"rank : {torch.distributed.get_rank()}, filename : {filename}")
                 for sample in data_sample_transpose:
