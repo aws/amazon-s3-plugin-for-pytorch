@@ -105,7 +105,9 @@ class s3_dataset(IterableDataset):
                 data_samples = create_data_samples_from_file(fileobj)
                 data_sample_transpose = list(zip(*data_samples))
                 random.shuffle(data_sample_transpose)
-                # num_samples = len(data_samples[0])
+                # truncating data to run 1 epoch in 2 hours
+                truncated_idx = len(data_sample_transpose) // 20
+                data_sample_transpose = data_sample_transpose[:truncated_idx]
                 print(f"rank : {torch.distributed.get_rank()}, filename : {filename}")
                 for sample in data_sample_transpose:
                     formatted_sample = format_sample(sample, self.max_pred_length)
@@ -507,7 +509,6 @@ def main():
                                     optimizer.param_groups[0]['lr']))
                     average_loss = 0
 
-            del train_dataloader
             epoch += 1
 
         if epoch >= args.num_train_epochs:
