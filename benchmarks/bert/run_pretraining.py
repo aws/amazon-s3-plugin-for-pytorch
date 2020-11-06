@@ -166,7 +166,7 @@ def parse_arguments():
                         type=float,
                         help="The initial learning rate for Adam.")
     parser.add_argument("--num_train_epochs",
-                        default=3.0,
+                        default=1.0, # changed to 1 for speed
                         type=float,
                         help="Total number of training epochs to perform.")
     parser.add_argument("--max_steps",
@@ -450,7 +450,6 @@ def main():
             print("Training. . .")
 
         model.train()
-        most_recent_ckpts_paths = []
         average_loss = 0.0  # averaged loss every args.log_freq steps
         epoch = 0
         training_steps = 0
@@ -508,21 +507,33 @@ def main():
                                     optimizer.param_groups[0]['lr']))
                     average_loss = 0
 
-            if is_main_process():
-                # Save last trained_model in epoch
-                logger.info(f"** ** * Saving model at end of epoch {epoch} ** ** * ")
-                model_to_save = model.module if hasattr(model,'module') else model  # Only save the model it-self
-                if args.resume_step < 0 or not args.phase2:
-                    output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step))
-                else:
-                    output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step + args.phase1_end_step))
-                if args.do_train:
-                    torch.save({'model': model_to_save.state_dict(),
-                                'optimizer': optimizer.state_dict(),
-                                'master params': list(amp.master_params(optimizer))},
-                                 output_save_file)
-            epoch += 1
             del train_dataloader
+            epoch += 1
+
+        if epoch >= args.num_train_epochs:
+            last_num_steps = global_step % args.log_freq
+            last_num_steps = args.log_freq if last_num_steps == 0 else last_num_steps
+            average_loss = torch.tensor(average_loss, dtype=torch.float32).cuda()
+            average_loss = average_loss / (last_num_steps * divisor)
+            if (torch.distributed.is_initialized()):
+                average_loss /= torch.distributed.get_world_size()
+                torch.distributed.all_reduce(average_loss)
+            if is_main_process():
+                logger.info("Total Steps:{} Final Loss = {}".format(training_steps, average_loss.item()))
+
+        if is_main_process():
+            # Save last trained_model in epoch
+            logger.info(f"** ** * Saving model at end of epoch {epoch} ** ** * ")
+            model_to_save = model.module if hasattr(model,'module') else model  # Only save the model it-self
+            if args.resume_step < 0 or not args.phase2:
+                output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step))
+            else:
+                output_save_file = os.path.join(args.output_dir, "ckpt_{}.pt".format(global_step + args.phase1_end_step))
+            if args.do_train:
+                torch.save({'model': model_to_save.state_dict(),
+                            'optimizer': optimizer.state_dict(),
+                            'master params': list(amp.master_params(optimizer))},
+                            output_save_file)
     return args
 
 
