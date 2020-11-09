@@ -1,7 +1,7 @@
 import platform
 import random
 from functools import partial
-
+import os
 import numpy as np
 from mmcv.parallel import collate
 from mmcv.runner import get_dist_info
@@ -85,6 +85,8 @@ def build_dataloader(dataset,
     init_fn = partial(
         worker_init_fn, num_workers=num_workers, rank=rank,
         seed=seed) if seed is not None else None
+
+    os.system('sudo renice -n  -12  -p ' + str(os.getpid()))
 
     data_loader = DataLoader(
         dataset,

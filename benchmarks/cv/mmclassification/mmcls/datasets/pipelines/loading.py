@@ -4,7 +4,7 @@ import mmcv
 import numpy as np
 
 from ..builder import PIPELINES
-
+import time
 
 @PIPELINES.register_module()
 class LoadImageFromFile(object):
@@ -28,11 +28,13 @@ class LoadImageFromFile(object):
     def __init__(self,
                  to_float32=False,
                  color_type='color',
-                 file_client_args=dict(backend='disk')):
+                 file_client_args=dict(backend='disk'),
+                 latency=0.0):
         self.to_float32 = to_float32
         self.color_type = color_type
         self.file_client_args = file_client_args.copy()
         self.file_client = None
+        self.latency = latency
 
     def __call__(self, results):
         if self.file_client is None:
@@ -53,6 +55,7 @@ class LoadImageFromFile(object):
         results['img'] = img
         results['img_shape'] = img.shape
         results['ori_shape'] = img.shape
+        time.sleep(self.latency)
         num_channels = 1 if len(img.shape) < 3 else img.shape[2]
         results['img_norm_cfg'] = dict(
             mean=np.zeros(num_channels, dtype=np.float32),
