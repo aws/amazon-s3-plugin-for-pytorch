@@ -54,6 +54,14 @@ def get_metrics(json_logs, num_gpus, epoch_num, model, suffix="", batch_size=Non
     stats["Throughput" + suffix]["Unit"] = "Count/Second"
     stats["Throughput" + suffix]["Value"] = throughput
 
+    gpu_time_mean =  statistics.mean(log_dicts[0][epoch_num]['time'])
+    gpu_time_sigma = statistics.pstdev(log_dicts[0][epoch_num]['time'])
+
+    data_time_mean = statistics.mean(log_dicts[0][epoch_num]['data_time'])
+    data_time_sigma = statistics.pstdev(log_dicts[0][epoch_num]['data_time'])
+    print("GPU run time metrics: Mean ", gpu_time_mean, "Standard Dev. ", gpu_time_sigma)
+    print("Data run time metrics: Mean ", data_time_mean, "Standard Dev. ", data_time_sigma)
+
     if 'top-1' in log_dicts[0][epoch_num]:
 
         acc1 = log_dicts[0][epoch_num]['top-1'][-1]
