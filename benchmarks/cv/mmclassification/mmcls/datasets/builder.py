@@ -86,8 +86,6 @@ def build_dataloader(dataset,
         worker_init_fn, num_workers=num_workers, rank=rank,
         seed=seed) if seed is not None else None
 
-    os.system('sudo renice -n  -12  -p ' + str(os.getpid()))
-
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
