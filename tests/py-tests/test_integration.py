@@ -52,15 +52,15 @@ from torch.utils.data.distributed import DistributedSampler
 import io
 import math
 import boto3
+import sys
 from torch.utils.data import DataLoader
 
 def read_using_boto(bucket, prefix_list):
-        fs = io.BytesIO()
         s= boto3.client('s3')
-
         s3_obj_set = set()
 
         for prefix in prefix_list:
+            fs = io.BytesIO()
             s.download_fileobj(bucket,
                                 prefix,
                                 fs)
@@ -69,13 +69,11 @@ def read_using_boto(bucket, prefix_list):
             if prefix[-3:] == "tar":
                 tarfile = tardata(file_content)
                 for fname, content in tarfile:
-                    s3_obj_set.add((fname, content))
-                    
+                    s3_obj_set.add((fname, content))                    
             elif prefix[-3:] == "zip":
                 zipfile = zipdata(file_content)
                 for fname, content in zipfile:
                     s3_obj_set.add((fname, content))
-
             else:
                 s3_obj_set.add((prefix.split("/")[-1], file_content))
         return s3_obj_set
@@ -86,7 +84,6 @@ def get_file_list(bucket, files_prefix):
 
     file_list = [summary.key for summary in my_bucket.objects.filter(Prefix=files_prefix)]
     return file_list[1:]
-
 
 def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
     s3_obj_set = set()
@@ -110,13 +107,45 @@ def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
         assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
         print ("Data correctly batched for s3Iterable dataset for {} workers".format(num_workers))
     
+def test_S3Dataset(boto_obj_set, bucket, prefix_list):
+    s3_obj_set = set()
+    batch_size = 32
+    url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+    dataset = S3Dataset(url_list)
+    expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
+    for num_workers in [0, 2, 4, 6, 8]:
+        dataloader = DataLoader(dataset,
+                        batch_size=batch_size, 
+                        num_workers=num_workers)
+        print ("\nTesting S3 dataset with {} workers".format(num_workers))
+        num_batches = 0
+        for fname, fobj in dataloader:
+           fname = [x.split("/")[-1] for x in fname]
+           batch_set = set(map(tuple, zip(fname, fobj)))
+           s3_obj_set.update(batch_set)
+           num_batches += 1
+        
+        # temp = next(iter(boto_obj_set))
+        # print (temp[1], temp[0])
+        # # print (next(iter(s3_obj_set))[0])
+        # print (len(boto_obj_set))
+        # print (len(s3_obj_set))
 
+        name_set1 = set([name for name, _ in boto_obj_set])
+        name_set2 = set([name for name, _ in s3_obj_set])
+        
+        assert name_set1 == name_set2, "Name mismatch"
+        print ("Names match")
+        assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
+        print ("All data correctly loaded for S3 dataset for {} workers".format(num_workers))
+        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
+        print ("Data correctly batched for S3 dataset for {} workers".format(num_workers))
 
 if __name__ == "__main__":
     print ("Let us get started")
-    
     bucket = "ydaiming-test-data2"
+
     tar_prefix_list = ["integration_tests/imagenet-train-000000.tar"]
     # boto_read_set = read_using_boto(bucket, tar_prefix_list)
     # test_S3IterableDataset(boto_read_set, bucket, tar_prefix_list)
@@ -124,4 +153,4 @@ if __name__ == "__main__":
     files_prefix = "integration_tests/files/"
     prefix_list = get_file_list(bucket, files_prefix)
     boto_read_set = read_using_boto(bucket, prefix_list)
-    
+    test_S3Dataset(boto_read_set, bucket, prefix_list)
