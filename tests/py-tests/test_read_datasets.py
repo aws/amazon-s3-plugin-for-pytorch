@@ -1,4 +1,3 @@
-import numpy as np
 import os
 import io
 import pytest
@@ -106,11 +105,3 @@ def test_csv_file_s3iterabledataset():
     result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
     assert result1.equals(result2)
     del os.environ['AWS_REGION']
-
-
-test_tar_file_s3dataset()
-test_tar_file_s3iterabledataset()
-test_zip_file_s3dataset()
-test_zip_file_s3iterabledataset()
-test_csv_file_s3dataset()
-test_csv_file_s3iterabledataset()

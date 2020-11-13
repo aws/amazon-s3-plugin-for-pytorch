@@ -1,76 +1,105 @@
-import numpy as np
 import os
 import io
 import pytest
-from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
-from awsio.python.lib.io.s3.s3dataset import (list_files, file_exists,
-                                              get_file_size)
+from awsio.python.lib.io.s3.s3dataset import S3IterableDataset, ShuffleDataset
 import boto3
 
 
-def test_wrong_filenames():
-    filenames = ['', 'shor', 'not_start_s3', 's3://', 's3:///no_bucket']
-    functions = [list_files, file_exists, get_file_size]
-    exception = False
-    for function in functions:
-        for filename in filenames:
-            try:
-                function(filename)
-            except ValueError:
-                exception = True
-            assert exception
-            exception = False
+def test_file_path():
+    """
+    Test S3IterableDataset for existing and nonexistent path
+    """
+    # existing path
+    s3_path = 's3://ydaiming-test-data2/test_0/test'
+    s3_dataset = S3IterableDataset(s3_path)
+    assert s3_dataset
+
+    # non-existent path
+    s3_path_none = 's3://ydaiming-test-data2/non_existent_path/test'
+    with pytest.raises(AssertionError) as excinfo:   
+        s3_dataset = S3IterableDataset(s3_path_none)
+    assert 'does not contain any objects' in str(excinfo.value)
 
 
-def test_list_files_prefix():
-    # default region is us-west-2
-    s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
-    result1 = list_files(s3_dataset_path)
+def test_urls_list():
+    """
+    Test whether urls_list input for S3IterableDataset works properly
+    """
+    os.environ['AWS_REGION'] = 'us-west-2'
+    # provide url prefix (path within bucket)
+    prefix_to_directory = 'test_0/test'
+    prefix_to_file = 'test_1.JPEG'
+    prefix_list=[prefix_to_directory, prefix_to_file]
+
+    # set up boto3
     s3 = boto3.resource('s3')
-    test_bucket = s3.Bucket('ydaiming-test-data2')
-    result2 = []
-    for url in test_bucket.objects.filter(Prefix='test_0/test'):
-        result2.append('s3://' + url.bucket_name + '/' + url.key)
-    assert isinstance(result1, list)
-    assert isinstance(result2, list)
-    assert result1 == result2
-
-
-def test_list_files_bucket():
-    # default region is us-west-2
-    s3_dataset_path = 's3://ydaiming-test-data2'
-    result1 = list_files(s3_dataset_path)
-    s3 = boto3.resource('s3')
-    test_bucket = s3.Bucket('ydaiming-test-data2')
-    result2 = []
-    for url in test_bucket.objects.all():
-        if url.key[-1] == '/':
-            continue
-        result2.append('s3://' + url.bucket_name + '/' + url.key)
-    assert isinstance(result1, list)
-    assert isinstance(result2, list)
-    assert result1 == result2
-
-
-def test_regions(region, s3_dataset_path, bucket_name, prefix):
-    os.environ['AWS_REGION'] = region
-    result1 = list_files(s3_dataset_path)
-    s3 = boto3.resource('s3')
+    bucket_name = 'ydaiming-test-data2'
     test_bucket = s3.Bucket(bucket_name)
-    result2 = []
-    for url in test_bucket.objects.filter(Prefix=prefix):
-        result2.append('s3://' + url.bucket_name + '/' + url.key)
-    assert isinstance(result1, list)
-    assert isinstance(result2, list)
-    assert result1 == result2
+
+    # try individual valid urls and collect url_list and all_boto3_files to test url list input
+    urls_list = list()
+    all_boto3_files = list()
+    for prefix in prefix_list:
+        # collect list of all file names using S3IterableDataset
+        url = os.path.join('s3://', bucket_name, prefix)
+        urls_list.append(url)
+        s3_dataset = S3IterableDataset(url)
+        s3_files = [item[0] for item in s3_dataset]
+
+        # collect list of all file names using boto3
+        boto3_files = [os.path.join('s3://', url.bucket_name, url.key) \
+            for url in test_bucket.objects.filter(Prefix=prefix)]
+        all_boto3_files.extend(boto3_files)
+
+        assert s3_files == boto3_files
+
+    # test list of two valid urls as input
+    s3_dataset = S3IterableDataset(urls_list)
+    s3_files = [item[0] for item in s3_dataset]
+
+    assert s3_files == all_boto3_files
+
+    # add an non-existent url to list of urls
+    url_to_non_existent = 's3://ydaiming-test-data2/non_existent_directory'
+    urls_list.append(url_to_non_existent)
+    with pytest.raises(AssertionError) as excinfo:   
+        s3_dataset = S3IterableDataset(urls_list)
+    assert 'does not contain any objects' in str(excinfo.value)    
+
+    del os.environ['AWS_REGION']
+
+
+def test_shuffle_true():
+    """
+    Tests shuffle_urls parameter, len and  set_epoch functions
+    """
+    os.environ['AWS_REGION'] = 'us-west-2'
+
+    # create two datasets, one shuffled with self.epoch
+    s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
+    s3_dataset0 = S3IterableDataset(s3_dataset_path)
+    s3_dataset1 = S3IterableDataset(s3_dataset_path, shuffle_urls=True)
+    s3_dataset1.set_epoch(5)
+
+    # len is defined as the length of the urls_list created by the path
+    assert len(s3_dataset0) == len(s3_dataset1)
+
+    # check to make sure shuffling works
+    filenames0 = [item[0] for item in s3_dataset0]
+    filenames1 = [item[0] for item in s3_dataset1]
+
+    assert len(filenames0) == len(filenames1)
+    assert filenames0 != filenames1
     del os.environ['AWS_REGION']
 
 
 def test_multi_download():
     s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
+
     if 'S3_DISABLE_MULTI_PART_DOWNLOAD' in os.environ:
         del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD']
     os.environ['AWS_REGION'] = 'us-east-1'
+
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:
@@ -98,40 +127,21 @@ def test_disable_multi_download():
     del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD'], os.environ['AWS_REGION']
 
 
-def test_file_exists(bucket_name, object_name):
-    result1 = file_exists('s3://' + bucket_name + '/' + object_name)
-    s3 = boto3.resource('s3')
-    bucket = s3.Bucket(bucket_name)
-    objs = list(bucket.objects.filter(Prefix=object_name))
-    if objs and any([w.key == object_name for w in objs]):
-        result2 = True
-    else:
-        result2 = False
-    assert result1 == result2
+def test_shuffle_dataset():
 
+    dataset = [i for i in range(10)]
 
-def test_get_file_size(bucket_name, object_name):
-    try:
-        result1 = get_file_size('s3://' + bucket_name + '/' + object_name)
-    except ValueError:
-        result1 = False
-    try:
-        s3 = boto3.resource('s3')
-        bucket = s3.Bucket(bucket_name)
-        result2 = bucket.Object(object_name).content_length
-    except Exception:
-        result2 = False
-    assert result1 == result2
+    # buffer_size 1 should yield the dataset without shuffling
+    shuffle_dataset = ShuffleDataset(dataset=dataset, buffer_size=1)
+    shuffle_content = [item for item in shuffle_dataset]
+    assert dataset == shuffle_content
 
+    # buffer_size smaller than dataset size
+    shuffle_dataset = ShuffleDataset(dataset=dataset, buffer_size=2)
+    assert set(dataset) == set(shuffle_content)
+    assert len(dataset) == len(shuffle_content)
 
-test_wrong_filenames()
-test_list_files_prefix()
-test_list_files_bucket()
-test_regions('us-east-1', 's3://roshanin-dev/test/n', 'roshanin-dev', 'test/n')
-test_file_exists('ydaiming-test-data2', 'test_0.JPEG')
-test_file_exists('ydaiming-test-data2', 'test_new_file.JPEG')
-test_file_exists('ydaiming-test-data2', 'folder_1')
-test_get_file_size('ydaiming-test-data2', 'test_0.JPEG')
-test_get_file_size('ydaiming-test-data2', 'test_0')
-test_multi_download()
-test_disable_multi_download()
+    # buffer_size greater than dataset size
+    shuffle_dataset = ShuffleDataset(dataset=dataset, buffer_size=15)
+    assert set(dataset) == set(shuffle_content)
+    assert len(dataset) == len(shuffle_content)

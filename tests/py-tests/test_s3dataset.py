@@ -1,60 +1,87 @@
-import numpy as np
 import os
-import io
 import pytest
 from awsio.python.lib.io.s3.s3dataset import S3Dataset
-from awsio.python.lib.io.s3.s3dataset import (list_files, file_exists,
-                                              get_file_size)
 import boto3
 
 
-def test_wrong_filenames():
-    filenames = ['', 'shor', 'not_start_s3', 's3://', 's3:///no_bucket']
-    functions = [list_files, file_exists, get_file_size]
-    exception = False
-    for function in functions:
-        for filename in filenames:
-            try:
-                function(filename)
-            except ValueError:
-                exception = True
-            assert exception
-            exception = False
+def test_file_path():
+    """
+    Test S3Dataset for existing and nonexistent path
+    """
+    # existing path
+    s3_path = 's3://ydaiming-test-data2/test_0/test'
+    s3_dataset = S3Dataset(s3_path)
+    assert s3_dataset
+
+    # non-existent path
+    s3_path_none = 's3://ydaiming-test-data2/non_existent_path/test'
+    with pytest.raises(AssertionError) as excinfo:   
+        s3_dataset = S3Dataset(s3_path_none)
+    assert 'does not contain any objects' in str(excinfo.value)
 
 
-def test_list_files_prefix():
-    # default region is us-west-2
+def test_urls_list():
+    """
+    Test whether urls_list input for S3Dataset works properly
+    """
+    os.environ['AWS_REGION'] = 'us-west-2'
+    # provide url prefix (path within bucket)
+    prefix_to_directory = 'test_0/test'
+    prefix_to_file = 'test_1.JPEG'
+    prefix_list=[prefix_to_directory, prefix_to_file]
+
+    # set up boto3
+    s3 = boto3.resource('s3')
+    bucket_name = 'ydaiming-test-data2'
+    test_bucket = s3.Bucket(bucket_name)
+
+    # try individual valid urls and collect url_list and all_boto3_files to test url list input
+    urls_list = list()
+    all_boto3_files = list()
+    for prefix in prefix_list:
+        # collect list of all file names using S3Dataset
+        url = os.path.join('s3://', bucket_name, prefix)
+        urls_list.append(url)
+        s3_dataset = S3Dataset(url)
+        s3_files = [item[0] for item in s3_dataset]
+
+        # collect list of all file names using boto3
+        boto3_files = [os.path.join('s3://', url.bucket_name, url.key) \
+            for url in test_bucket.objects.filter(Prefix=prefix)]
+        all_boto3_files.extend(boto3_files)
+
+        assert s3_files == boto3_files
+
+    # test list of two valid urls as input
+    s3_dataset = S3Dataset(urls_list)
+    s3_files = [item[0] for item in s3_dataset]
+
+    assert s3_files == all_boto3_files
+
+    # add an non-existent url to list of urls
+    url_to_non_existent = 's3://ydaiming-test-data2/non_existent_directory'
+    urls_list.append(url_to_non_existent)
+    with pytest.raises(AssertionError) as excinfo:   
+        s3_dataset = S3Dataset(urls_list)
+    assert 'does not contain any objects' in str(excinfo.value)    
+
+    del os.environ['AWS_REGION']
+
+
+def test_multi_download():
+    """
+    Test whether S3Dataset with multiple downloads in one url works properly
+    """
     s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
-    result1 = list_files(s3_dataset_path)
-    s3 = boto3.resource('s3')
-    test_bucket = s3.Bucket('ydaiming-test-data2')
-    result2 = []
-    for url in test_bucket.objects.filter(Prefix='test_0/test'):
-        result2.append('s3://' + url.bucket_name + '/' + url.key)
-    assert isinstance(result1, list)
-    assert isinstance(result2, list)
-    assert result1 == result2
+    bucket_name = 'ydaiming-test-data2'
+    prefix = 'test_0/test'
 
+    if 'S3_DISABLE_MULTI_PART_DOWNLOAD' in os.environ:
+        del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD']
 
-def test_list_files_bucket():
-    # default region is us-west-2
-    s3_dataset_path = 's3://ydaiming-test-data2'
-    result1 = list_files(s3_dataset_path)
-    s3 = boto3.resource('s3')
-    test_bucket = s3.Bucket('ydaiming-test-data2')
-    result2 = []
-    for url in test_bucket.objects.all():
-        if url.key[-1] == '/':
-            continue
-        result2.append('s3://' + url.bucket_name + '/' + url.key)
-    assert isinstance(result1, list)
-    assert isinstance(result2, list)
-    assert result1 == result2
-
-
-def test_regions(region, s3_dataset_path, bucket_name, prefix):
-    os.environ['AWS_REGION'] = region
-    result1 = list_files(s3_dataset_path)
+    dataset = S3Dataset(s3_dataset_path)
+    # collect filename from each item in dataset
+    result1 = [item[0] for item in dataset]
     s3 = boto3.resource('s3')
     test_bucket = s3.Bucket(bucket_name)
     result2 = []
@@ -63,73 +90,23 @@ def test_regions(region, s3_dataset_path, bucket_name, prefix):
     assert isinstance(result1, list)
     assert isinstance(result2, list)
     assert result1 == result2
-    del os.environ['AWS_REGION']
-
-
-def test_multi_download():
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
-    if 'S3_DISABLE_MULTI_PART_DOWNLOAD' in os.environ:
-        del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD']
-    os.environ['AWS_REGION'] = 'us-east-1'
-    dataset = S3Dataset(s3_dataset_path)
-    import pandas as pd
-    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
-    s3 = boto3.client('s3')
-    obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
-                        Key=s3_dataset_path.split('/')[3])
-    result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
-    assert result1.equals(result2)
 
 
 def test_disable_multi_download():
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
+    s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
     os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD'] = "ON"
-    os.environ['AWS_REGION'] = 'us-east-1'
     dataset = S3Dataset(s3_dataset_path)
-    import pandas as pd
-    result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
-    s3 = boto3.client('s3')
-    obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2],
-                        Key=s3_dataset_path.split('/')[3])
-    result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
-    assert result1.equals(result2)
-    del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD'], os.environ['AWS_REGION']
+    result1 = [item[0] for item in dataset]
 
-
-def test_file_exists(bucket_name, object_name):
-    result1 = file_exists('s3://' + bucket_name + '/' + object_name)
+    # boto3
+    bucket_name = 'ydaiming-test-data2'
+    prefix = 'test_0/test'
     s3 = boto3.resource('s3')
-    bucket = s3.Bucket(bucket_name)
-    objs = list(bucket.objects.filter(Prefix=object_name))
-    if objs and any([w.key == object_name for w in objs]):
-        result2 = True
-    else:
-        result2 = False
+    test_bucket = s3.Bucket(bucket_name)
+    result2 = ['s3://' + url.bucket_name + '/' + url.key \
+        for url in test_bucket.objects.filter(Prefix=prefix)]
+
+    assert isinstance(result1, list)
+    assert isinstance(result2, list)
     assert result1 == result2
-
-
-def test_get_file_size(bucket_name, object_name):
-    try:
-        result1 = get_file_size('s3://' + bucket_name + '/' + object_name)
-    except ValueError:
-        result1 = False
-    try:
-        s3 = boto3.resource('s3')
-        bucket = s3.Bucket(bucket_name)
-        result2 = bucket.Object(object_name).content_length
-    except Exception:
-        result2 = False
-    assert result1 == result2
-
-
-test_wrong_filenames()
-test_list_files_prefix()
-test_list_files_bucket()
-test_regions('us-east-1', 's3://roshanin-dev/test/n', 'roshanin-dev', 'test/n')
-test_file_exists('ydaiming-test-data2', 'test_0.JPEG')
-test_file_exists('ydaiming-test-data2', 'test_new_file.JPEG')
-test_file_exists('ydaiming-test-data2', 'folder_1')
-test_get_file_size('ydaiming-test-data2', 'test_0.JPEG')
-test_get_file_size('ydaiming-test-data2', 'test_0')
-test_multi_download()
-test_disable_multi_download()
+    del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD']
