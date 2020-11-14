@@ -17,7 +17,7 @@ COMMAND="srun --job-name=${MODEL}
     --ntasks-per-node=${NUM_GPUS_PER_NODE}
     --kill-on-bad-exit=1
     python -u tools/train.py
-    ${CONFIG_FILE} --work-dir=${WORK_DIR} --launcher='slurm' --learning_rate=${LEARNING_RATE}"
+    ${CONFIG_FILE} --work-dir=${WORK_DIR} --launcher='slurm' "
 
 
 SECONDS=0
