@@ -96,6 +96,7 @@ def build_dataloader(dataset,
         pin_memory=False,
         shuffle=shuffle,
         worker_init_fn=init_fn,
+        prefetch_factor=prefetch_factor,
         **kwargs)
 
     return data_loader

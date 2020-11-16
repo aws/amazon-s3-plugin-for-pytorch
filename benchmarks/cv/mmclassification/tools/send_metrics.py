@@ -1,5 +1,5 @@
 import json
-import boto3
+# import boto3
 import os
 import os.path as osp
 import statistics
@@ -142,7 +142,7 @@ def main():
     stats["Time per Epoch" + suffix]["Value"] = stats["Total Time"]["Value"] / (args.epoch_num)
     print(stats)
 
-    cloudwatch = boto3.client('cloudwatch', region_name='us-west-2')
+    # cloudwatch = boto3.client('cloudwatch', region_name='us-west-2')
 
     full_run_metrics = ["top-1", "top-5", "Time per Epoch", "Total Time"]
     quick_run_metrics = ["Throughput", "Memory"]
