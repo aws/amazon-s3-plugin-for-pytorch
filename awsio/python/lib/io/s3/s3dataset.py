@@ -107,6 +107,7 @@ class S3Dataset(Dataset):
         return len(self.urls_list)
 
     def __getitem__(self, idx):
+        print ("Yauza")
         filename = self.urls_list[idx]
         fileobj = self.handler.s3_read(filename)
         return filename, fileobj

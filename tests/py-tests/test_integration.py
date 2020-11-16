@@ -29,8 +29,6 @@ Test2: Establish Dataloader works correctly
 Test3:
     Add for shuffling, check other functionalities
 
-    
-
 Add later: 
     check to see if shuffling is working.
     set should be same, but lists should not be equal.
@@ -44,8 +42,11 @@ Discuss:
     S3Iterable will not have sampler
 """
 
-from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
-from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
+# from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
+# from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
+
+from s3dataset import S3Dataset, S3IterableDataset
+from s3dataset import tardata, zipdata
 
 from torch.utils.data.distributed import DistributedSampler
 
@@ -125,18 +126,10 @@ def test_S3Dataset(boto_obj_set, bucket, prefix_list):
            batch_set = set(map(tuple, zip(fname, fobj)))
            s3_obj_set.update(batch_set)
            num_batches += 1
-        
-        # temp = next(iter(boto_obj_set))
-        # print (temp[1], temp[0])
-        # # print (next(iter(s3_obj_set))[0])
-        # print (len(boto_obj_set))
-        # print (len(s3_obj_set))
 
         name_set1 = set([name for name, _ in boto_obj_set])
         name_set2 = set([name for name, _ in s3_obj_set])
         
-        assert name_set1 == name_set2, "Name mismatch"
-        print ("Names match")
         assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
         print ("All data correctly loaded for S3 dataset for {} workers".format(num_workers))
         assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
@@ -146,7 +139,7 @@ if __name__ == "__main__":
     print ("Let us get started")
     bucket = "ydaiming-test-data2"
 
-    tar_prefix_list = ["integration_tests/imagenet-train-000000.tar"]
+    # tar_prefix_list = ["integration_tests/imagenet-train-000000.tar"]
     # boto_read_set = read_using_boto(bucket, tar_prefix_list)
     # test_S3IterableDataset(boto_read_set, bucket, tar_prefix_list)
 
