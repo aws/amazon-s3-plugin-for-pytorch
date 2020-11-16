@@ -97,7 +97,9 @@ class S3Dataset(Dataset):
         self.urls_list = list()
         for url in urls:
             if not file_exists(url):
-                self.urls_list.extend(self.handler.list_files(url))
+                url_objects = self.handler.list_files(url)
+                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+                self.urls_list.extend(url_objects)
             elif self.urls_list:
                 self.urls_list.append(url)
             else:
@@ -124,7 +126,9 @@ class S3IterableDataset(IterableDataset):
         self.urls_list = list()
         for url in urls:
             if not file_exists(url):
-                self.urls_list.extend(self.handler.list_files(url))
+                url_objects = self.handler.list_files(url)
+                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+                self.urls_list.extend(url_objects)
             elif self.urls_list:
                 self.urls_list.append(url)
             else:
@@ -219,8 +223,9 @@ class S3BotoSet(Dataset):
         url = 's3://' + bucket_name + '/' + prefix
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
-        self.urls_list.extend(self.handler.list_files(url))
-        print(self.urls_list)
+        url_objects = self.handler.list_files(url)
+        assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+        self.urls_list.extend(url_objects)
 
         MB = 1024**2
         self.config = TransferConfig(max_concurrency=10,
@@ -252,8 +257,9 @@ class S3BotoIterableDataset(IterableDataset):
         url = 's3://' + bucket_name + '/' + prefix
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
-        self.urls_list.extend(self.handler.list_files(url))
-        print(self.urls_list)
+        url_objects = self.handler.list_files(url)
+        assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+        self.urls_list.extend(url_objects)
         self.epoch = 0
         self.shuffle_urls = shuffle_urls
 

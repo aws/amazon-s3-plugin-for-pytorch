@@ -396,16 +396,19 @@ void S3Init::list_files(const std::string &file_url,
         }
 
         listObjectsResult = listObjectsOutcome.GetResult();
-        for (const auto &object : listObjectsResult.GetContents()) {
-            Aws::String key = default_key + object.GetKey();
-            if (key.back() == '/') {
-                 continue;
+        Aws::Vector<Aws::S3::Model::Object> objects = listObjectsResult.GetContents();
+        if (!objects.empty()) {
+            for (const auto &object : objects) {
+                Aws::String key = default_key + object.GetKey();
+                if (key.back() == '/') {
+                    continue;
+                }
+                Aws::String bucket_aws(bucket.c_str(), bucket.size());
+                Aws::String entry = "s3://" + bucket_aws + "/" + object.GetKey();
+                filenames->push_back(entry.c_str());
             }
-            Aws::String bucket_aws(bucket.c_str(), bucket.size());
-            Aws::String entry = "s3://" + bucket_aws + "/" + object.GetKey();
-            filenames->push_back(entry.c_str());
+            listObjectsRequest.SetMarker(listObjectsResult.GetContents().back().GetKey());
         }
-        listObjectsRequest.SetMarker(listObjectsResult.GetContents().back().GetKey());
     } while (listObjectsResult.GetIsTruncated());
 }
 
