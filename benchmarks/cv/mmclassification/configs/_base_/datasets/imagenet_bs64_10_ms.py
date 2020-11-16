@@ -3,7 +3,7 @@ dataset_type = 'ImageNet'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
-    dict(type='LoadImageFromFile', latency=0.00),
+    dict(type='LoadImageFromFile', latency=0.010),
     dict(type='RandomResizedCrop', size=224),
     dict(type='RandomFlip', flip_prob=0.5, direction='horizontal'),
     dict(type='Normalize', **img_norm_cfg),
@@ -38,4 +38,4 @@ data = dict(
         data_prefix='data/imagenet/val',
         ann_file='data/imagenet/meta/val.txt',
         pipeline=test_pipeline))
-evaluation = dict(interval=10, metric='accuracy')
+evaluation = dict(interval=1, metric='accuracy')

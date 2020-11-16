@@ -51,7 +51,8 @@ def train_model(model,
             num_gpus=len(cfg.gpu_ids),
             dist=distributed,
             round_up=True,
-            seed=cfg.seed) for ds in dataset
+            seed=cfg.seed,
+            prefetch_factor=cfg.prefetch_factor) for ds in dataset
     ]
 
     # put model on gpus
@@ -105,7 +106,8 @@ def train_model(model,
             workers_per_gpu=cfg.data.workers_per_gpu,
             dist=distributed,
             shuffle=False,
-            round_up=False)
+            round_up=False,
+            prefetch_factor=cfg.prefetch_factor)
         eval_cfg = cfg.get('evaluation', {})
         eval_hook = DistEvalHook if distributed else EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))

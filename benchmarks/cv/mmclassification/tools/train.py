@@ -66,6 +66,7 @@ def parse_args():
     parser.add_argument('--n_workers', type=int, default=None)
     parser.add_argument('--learning_rate', type=float, default=None)
     parser.add_argument('--fp16', type=int, default=0)
+    parser.add_argument('--prefetch_factor', type=int, default=2)
 
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
@@ -103,6 +104,9 @@ def main():
         print("Training in FP16 mode")
         cfg['fp16'] = {}
         cfg.fp16['loss_scale'] = 512.0
+
+    if (args.prefetch_factor):
+        cfg.prefetch_factor = args.prefetch_factor
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:
@@ -183,8 +187,8 @@ def main():
         validate=(not args.no_validate),
         timestamp=timestamp,
         meta=meta)
-    if rank == 0:
-        print('Total time taken {}'.format(time.time()-start_time))
+    # if rank == 0:
+    #     print('Total time taken {}'.format(time.time()-start_time))
 
 if __name__ == '__main__':
     main()

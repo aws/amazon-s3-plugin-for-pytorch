@@ -47,6 +47,7 @@ def build_dataloader(dataset,
                      shuffle=True,
                      round_up=True,
                      seed=None,
+                     prefetch_factor=2,
                      **kwargs):
     """Build PyTorch DataLoader.
 
