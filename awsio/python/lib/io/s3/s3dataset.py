@@ -203,13 +203,11 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
             while True:
                 try:
                     evict_idx = random.randint(0, self.buffer_size - 1)
-                    yield shufbuf[evict_idx]
+                    yield shufbuf.pop(evict_idx)
                     item = next(dataset_iter)
-                    shufbuf[evict_idx] = item
+                    shufbuf.append(item)
                 except StopIteration:
                     break
-            while len(shufbuf) > 0:
-                yield shufbuf.pop()
         except GeneratorExit:
             pass
 
