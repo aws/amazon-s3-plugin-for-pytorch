@@ -45,7 +45,7 @@ Discuss:
 # from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
 # from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
 
-from s3dataset import S3Dataset, S3IterableDataset
+from s3dataset import S3Dataset, S3IterableDataset, S3BotoSet
 from s3dataset import tardata, zipdata
 
 from torch.utils.data.distributed import DistributedSampler
@@ -112,10 +112,17 @@ def test_S3Dataset(boto_obj_set, bucket, prefix_list):
     s3_obj_set = set()
     batch_size = 32
     url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+    print (url_list)
+    url_list = ['s3://coco-dataset-mmdetection/train2017']
+    print (url_list)
+    url_list = ["s3://ydaiming-test-data2/integration_tests/files"]
+    # url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+
+
     dataset = S3Dataset(url_list)
     expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
-    for num_workers in [0, 2, 4, 6, 8]:
+    for num_workers in [2]:
         dataloader = DataLoader(dataset,
                         batch_size=batch_size, 
                         num_workers=num_workers)
