@@ -12,7 +12,7 @@ from itertools import chain
 meta_prefix = "__"
 meta_suffix = "__"
 
-def reraise_exception(exn):
+def reraise_exception(exn): # pragma: no cover
     """Called in an exception handler to re-raise the exception."""
     raise exn
 
@@ -20,45 +20,47 @@ def reraise_exception(exn):
 def tardata(fileobj, skip_meta=r"__[^/]*__($|/)", handler=reraise_exception):
     """Iterator yielding filename, content pairs for the given tar stream.
     """
+    # eliminated from test coverage since checking requires invalid tarfile
     try:
         stream = tarfile.open(fileobj=io.BytesIO(fileobj), mode="r|*")
         for tarinfo in stream:
             try:
-                if not tarinfo.isreg():
+                if not tarinfo.isreg(): # pragma: no cover
                     continue
                 fname = tarinfo.name
-                if fname is None:
+                if fname is None: # pragma: no cover
                     continue
                 if ("/" not in fname and fname.startswith(meta_prefix)
-                        and fname.endswith(meta_suffix)):
+                        and fname.endswith(meta_suffix)): # pragma: no cover
                     # skipping metadata for now
                     continue
-                if skip_meta is not None and re.match(skip_meta, fname):
+                if skip_meta is not None and re.match(skip_meta, fname): # pragma: no cover
                     continue
                 data = stream.extractfile(tarinfo).read()
                 yield fname, data
-            except Exception as exn:
+            except Exception as exn: # pragma: no cover
                 if handler(exn):
                     continue
                 else:
                     break
         del stream
-    except Exception as exn:
+    except Exception as exn: # pragma: no cover
         handler(exn)
 
 
 def zipdata(fileobj, handler=reraise_exception):
     """Iterator yielding filename, content pairs for the given zip stream.
     """
+    # eliminated from test coverage since checking requires invalid zipfile
     try:
         with zipfile.ZipFile(io.BytesIO(fileobj), 'r') as zfile:
             try:
                 for file_ in zfile.namelist():
                     data = zfile.read(file_)
                     yield file_, data
-            except Exception as exn:
+            except Exception as exn: # pragma: no cover
                 print("Error:", exn)
-    except Exception as exn:
+    except Exception as exn: # pragma: no cover
         print("Error:", exn)
 
 
@@ -158,7 +160,7 @@ class S3IterableDataset(IterableDataset):
         return chain.from_iterable(map(self.download_data, urls_list))
 
     def worker_dist(self, urls):
-        if dist.is_initialized() :
+        if dist.is_initialized():
             world_size = dist.get_world_size()
             rank = dist.get_rank()
             total_size = len(urls)
@@ -180,9 +182,9 @@ class S3IterableDataset(IterableDataset):
     def __len__(self):
         return len(self.urls_list)
 
-
     def set_epoch(self, epoch):
         self.epoch = epoch
+
 
 class ShuffleDataset(torch.utils.data.IterableDataset):
     def __init__(self, dataset, buffer_size):
@@ -194,7 +196,7 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
         shufbuf = []
         try:
             dataset_iter = iter(self.dataset)
-            for i in range(self.buffer_size):
+            for _ in range(self.buffer_size):
                 shufbuf.append(next(dataset_iter))
         except StopIteration:
             self.buffer_size = len(shufbuf)
@@ -208,13 +210,13 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
                     shufbuf.append(item)
                 except StopIteration:
                     break
-        except GeneratorExit:
+        except GeneratorExit: # pragma: no cover
             pass
 
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-class S3BotoSet(Dataset):
+class S3BotoSet(Dataset): # pragma: no cover
     """A mapped-style dataset for objects in s3.
     """
     def __init__(self, bucket_name, prefix):
@@ -247,7 +249,7 @@ class S3BotoSet(Dataset):
 
         return self.urls_list[idx], fs.getvalue()
 
-class S3BotoIterableDataset(IterableDataset):
+class S3BotoIterableDataset(IterableDataset): # pragma: no cover
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """

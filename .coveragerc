@@ -1,0 +1,5 @@
+[report]
+omit =
+    awsio/python/lib/io/s3/mnist*
+    awsio/python/lib/io/s3/test.py
+
