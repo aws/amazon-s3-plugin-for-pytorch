@@ -1,3 +1,17 @@
+# Copyright 2017-2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"). You
+# may not use this file except in compliance with the License. A copy of
+# the License is located at
+#
+#     http://aws.amazon.com/apache2.0/
+#
+# or in the "license" file accompanying this file. This file is
+# distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF
+# ANY KIND, either express or implied. See the License for the specific
+# language governing permissions and limitations under the License.
+
+
 import os
 import re
 import sys
@@ -7,6 +21,12 @@ import subprocess
 from setuptools import setup, Extension, find_packages 
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
+
+# metadata
+package_name = 'awsio'
+version = open('version.txt', 'r').read().strip()
+required_packages = []
+
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
@@ -61,15 +81,34 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
-setup(
-    name='awsio',
-    version='0.0.1',
-    author='Roshani Nagmote',
-    author_email='roshaninagmote2@gmail.com',
-    description='A test project using pybind11 and CMake',
-    long_description='',
-    ext_modules=[CMakeExtension('aws_io')],
-    cmdclass=dict(build_ext=CMakeBuild),
-    packages=find_packages(exclude=('tests',)),
-    zip_safe=False,
-)
+if __name__ == "__main__":
+    print(f"Building wheel for {package_name}-{version}")
+
+    with open('README.md') as f:
+        readme = f.read()
+
+    setup(
+        name=package_name,
+        version=version,
+        author='Amazon Web Services',
+        author_email='aws-pytorch@amazon.com',
+        description='A package for creating PyTorch Datasets using objects in AWS S3 buckets',
+        long_description=readme,
+        license='Apache License 2.0',
+        keywords='ML Amazon AWS AI PyTorch',
+
+        # Package info
+        packages=find_packages(exclude=('test',)),
+        zip_safe=False,
+        install_requires=required_packages,
+        extras_require={
+            "scipy": ["scipy"],
+        },
+        ext_modules=[CMakeExtension('aws_io')],
+        cmdclass=dict(build_ext=CMakeBuild),
+        classifiers=[
+            "Programming Language :: Python :: 3",
+            "License :: OSI Approved :: Apache Software License",
+            "Operating System :: OS Independent",
+        ],
+    )
