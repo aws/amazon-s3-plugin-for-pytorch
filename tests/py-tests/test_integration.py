@@ -111,23 +111,23 @@ def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
 def test_S3Dataset(boto_obj_set, bucket, prefix_list):
     s3_obj_set = set()
     batch_size = 32
-    url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
-    print (url_list)
-    url_list = ['s3://coco-dataset-mmdetection/train2017']
-    print (url_list)
-    url_list = ["s3://ydaiming-test-data2/integration_tests/files"]
-    # url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+    url_list1 = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+    # url_list = ["s3://ydaiming-test-data2/integration_tests/files"]
+    url_list2 = ["s3://ydaiming-test-data2/integration_tests/files"]
+    # print (url_list)
 
-
-    dataset = S3Dataset(url_list)
+    # dataset2 = S3Dataset(url_list2)
+    dataset1 = S3Dataset(url_list2)
+    # print ("Are the lists equal?", dataset1.urls_list == dataset2.urls_list)
     expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
-    for num_workers in [2]:
-        dataloader = DataLoader(dataset,
+    for num_workers in [1]:
+        dataloader = DataLoader(dataset1,
                         batch_size=batch_size, 
                         num_workers=num_workers)
         print ("\nTesting S3 dataset with {} workers".format(num_workers))
         num_batches = 0
+        
         for fname, fobj in dataloader:
            fname = [x.split("/")[-1] for x in fname]
            batch_set = set(map(tuple, zip(fname, fobj)))
