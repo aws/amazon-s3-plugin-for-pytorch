@@ -4,7 +4,7 @@ S3 plugin is a PyTorch Iterable dataset which allows to train pytorch models by 
 It supports all the file formats in S3. It enables users to train models on large scale data without having to worry about
 copying data on local nodes. S3 plugin can be used as:
 
-```
+```python
 from torch.aws_io import S3IterableDataset
 from torchvision import transforms, utils
 
@@ -90,7 +90,7 @@ I generally recommend using a released version of the SDK to ensure that you’v
 aws-sdk-cpp> git checkout 1.7.328
 ```
 
-```
+```shell
 aws-sdk-cpp> mkdir build
 aws-sdk-cpp> cd build
 aws-sdk-cpp/build> cmake .. -DCMAKE_BUILD_TYPE=Debug 
@@ -107,7 +107,7 @@ Few things to take care of while building the project:
 
 To build the project and test the added dependencies:
 
-```
+```shell
 mkdir build
 cd build
 
