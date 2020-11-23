@@ -1,6 +1,60 @@
-# aws_io
+# S3 Plugin
 
-## Dependencies
+S3 plugin is a PyTorch Iterable dataset which allows to train pytorch models by streaming data residing in S3 bucket. 
+It supports all the file formats in S3. It enables users to train models on large scale data without having to worry about
+copying data on local nodes. S3 plugin can be used as:
+
+```
+from torch.aws_io import S3IterableDataset
+from torchvision import transforms, utils
+
+normalize = transforms.Normalize(
+    mean=[0.485, 0.456, 0.406],
+    std=[0.229, 0.224, 0.225])
+    
+preproc = transforms.Compose([
+    transforms.RandomResizedCrop(224),
+    transforms.RandomHorizontalFlip(),
+    transforms.ToTensor(),
+    normalize,
+])
+
+# API 
+dataset = (
+    S3IterableDataset('s3://path/to/image_data/folder or file')
+    .dataproc(batch_size=200, num_shards =2) # defines shuffling, sharding, sampling parameters
+    .decode("pil")
+    .transform_fn(image=preproc)   
+)
+
+loader = torch.utils.data.DataLoader(dataset, num_workers=8)
+for inputs, targets in loader:
+    ... # training
+
+```
+### Usage
+S3 plugin works with dataset in any format. 
+1. Using same format as disk
+ 
+
+2. Using shards or tar files:
+
+
+### Creating tar files
+Add path to script
+
+
+
+
+## To Do
+1. List all file format supported 
+2. Can we have public s3 buckets so that the example s3 link will work for all customers?
+3. Are we going to add S3 boto dataset as well?
+ 
+
+
+## Installation
+### Dependencies
 - Pytorch 1.5
 - AWS-SDK-CPP (core and S3) See below for instructions
 - cmake (>v3.2)
@@ -68,5 +122,4 @@ To run the sample, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSIO
 ```
 ./aws_io
 ```
-
 
