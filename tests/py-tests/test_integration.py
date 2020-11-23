@@ -90,10 +90,11 @@ def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
     s3_obj_set = set()
     batch_size = 32
     url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
-    dataset = S3IterableDataset(url_list)
+    
     expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
     for num_workers in [0, 2, 4, 6, 8]:
+        dataset = S3IterableDataset(url_list)
         dataloader = DataLoader(dataset,
                         batch_size=batch_size, 
                         num_workers=num_workers)
@@ -112,17 +113,13 @@ def test_S3Dataset(boto_obj_set, bucket, prefix_list):
     s3_obj_set = set()
     batch_size = 32
     url_list1 = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
-    # url_list = ["s3://ydaiming-test-data2/integration_tests/files"]
     url_list2 = ["s3://ydaiming-test-data2/integration_tests/files"]
-    # print (url_list)
 
-    # dataset2 = S3Dataset(url_list2)
-    dataset1 = S3Dataset(url_list2)
-    # print ("Are the lists equal?", dataset1.urls_list == dataset2.urls_list)
     expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
-    for num_workers in [1]:
-        dataloader = DataLoader(dataset1,
+    for num_workers in [0, 2, 4, 6, 8]:
+        dataset = S3Dataset(url_list1)
+        dataloader = DataLoader(dataset,
                         batch_size=batch_size, 
                         num_workers=num_workers)
         print ("\nTesting S3 dataset with {} workers".format(num_workers))
@@ -133,9 +130,6 @@ def test_S3Dataset(boto_obj_set, bucket, prefix_list):
            batch_set = set(map(tuple, zip(fname, fobj)))
            s3_obj_set.update(batch_set)
            num_batches += 1
-
-        name_set1 = set([name for name, _ in boto_obj_set])
-        name_set2 = set([name for name, _ in s3_obj_set])
         
         assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
         print ("All data correctly loaded for S3 dataset for {} workers".format(num_workers))
@@ -143,14 +137,17 @@ def test_S3Dataset(boto_obj_set, bucket, prefix_list):
         print ("Data correctly batched for S3 dataset for {} workers".format(num_workers))
 
 if __name__ == "__main__":
-    print ("Let us get started")
+    print ("Starting the Tests\n")
+    
     bucket = "ydaiming-test-data2"
 
-    # tar_prefix_list = ["integration_tests/imagenet-train-000000.tar"]
-    # boto_read_set = read_using_boto(bucket, tar_prefix_list)
-    # test_S3IterableDataset(boto_read_set, bucket, tar_prefix_list)
+    tar_prefix_list = ["integration_tests/imagenet-train-000000.tar"]
+    boto_read_set = read_using_boto(bucket, tar_prefix_list)
+    test_S3IterableDataset(boto_read_set, bucket, tar_prefix_list)
 
     files_prefix = "integration_tests/files/"
     prefix_list = get_file_list(bucket, files_prefix)
     boto_read_set = read_using_boto(bucket, prefix_list)
     test_S3Dataset(boto_read_set, bucket, prefix_list)
+
+    print ("\nAll tests passed successfully")
