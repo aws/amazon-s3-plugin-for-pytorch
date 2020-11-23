@@ -22,7 +22,7 @@ preproc = transforms.Compose([
 # API 
 dataset = (
     S3IterableDataset('s3://path/to/image_data/folder or file')
-    .dataproc(batch_size=200, num_shards =2) # defines shuffling, sharding, sampling parameters
+    .dataproc(batch_size=200) # defines shuffling, sampling parameters
     .decode("pil")
     .transform_fn(image=preproc)   
 )
@@ -33,24 +33,46 @@ for inputs, targets in loader:
 
 ```
 ### Usage
-S3 plugin works with dataset in any format. 
-1. Using same format as disk
+S3 plugin works with dataset in any format. There are two ways to use it:
+1. Without using shards:  Data can be uploaded to S3 without any preprocessing and can be used as it 
+is. However this method does not use parallel IO and can be slower when file size is small and number of objects is 
+large. 
+```python
+dataset = (
+    S3IterableDataset('s3://path/to/image_data/folder')
+)
+
+loader = torch.utils.data.DataLoader(dataset, num_workers=8)
+for inputs, targets in loader:
+    ... # training
+
+```
  
 
-2. Using shards or tar files:
+2. Using shards or tar/zip files: We recommend using shards to facilitate parallel IO and shuffling. After every epoch, 
+dataset.epoch needs to be updated when shuffling is enabled. 
+```python
+dataset = (
+    S3IterableDataset('s3://path/to/image_data/folder')
+)
+
+loader = torch.utils.data.DataLoader(dataset, num_workers=8)
+for inputs, targets in loader:
+    ... # training
+
+```
+
+### Creating shards
+Please refer to this script to create shards. 
+https://github.com/tmbdev/pytorch-imagenet-wds/blob/master/makeshards.py
+
+## Distributed Training
+As compared to map style dataset, where sampler handles the distributing data to different nodes, for iterable dataset
+this logic needs to be implemented inside dataset. S3 dataset divides given list of urls/files between 
+different workers and nodes if distributed training is enabled. 
 
 
-### Creating tar files
-Add path to script
 
-
-
-
-## To Do
-1. List all file format supported 
-2. Can we have public s3 buckets so that the example s3 link will work for all customers?
-3. Are we going to add S3 boto dataset as well?
- 
 
 
 ## Installation
@@ -123,3 +145,8 @@ To run the sample, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSIO
 ./aws_io
 ```
 
+## To Do
+1. List all file format supported 
+2. Can we have public s3 buckets so that the example s3 link will work for all customers?
+3. Are we going to add S3 boto dataset as well?
+ 
