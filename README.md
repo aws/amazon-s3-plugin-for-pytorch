@@ -37,13 +37,18 @@ S3 plugin works with dataset in any format. There are two ways to use it:
 is. However this method does not use parallel IO and can be slower when file size is small and number of objects is 
 large. 
 ```python
-dataset = (
-    S3IterableDataset('s3://path/to/image_data/folder')
-)
+from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
+from torch.utils.data import DataLoader
+url_list = ["s3://ydaiming-test-data2/integration_tests/files"]
+dataset = S3IterableDataset(url_list)
+dataloader = DataLoader(dataset,
+                        num_workers=1)
 
-loader = torch.utils.data.DataLoader(dataset, num_workers=8)
-for inputs, targets in loader:
-    ... # training
+for i, (fname, fobj) in enumerate(dataset):
+    print(fname)
+    print(fobj)
+    if i == 0:
+        break
 
 ```
  
@@ -51,7 +56,7 @@ for inputs, targets in loader:
 2. Using shards or tar/zip files: We recommend using shards to facilitate parallel IO and shuffling. After every epoch, 
 dataset.epoch needs to be updated when shuffling is enabled. 
 ```python
-from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
+from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
 from torch.utils.data import DataLoader
 import io
 
