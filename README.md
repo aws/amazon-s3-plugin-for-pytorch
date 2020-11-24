@@ -51,7 +51,10 @@ for inputs, targets in loader:
 2. Using shards or tar/zip files: We recommend using shards to facilitate parallel IO and shuffling. After every epoch, 
 dataset.epoch needs to be updated when shuffling is enabled. 
 ```python
+from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
 from torch.utils.data import DataLoader
+import io
+
 url_list= ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-000000.tar"]
 dataset = S3IterableDataset(url_list)
 dataloader = DataLoader(dataset,
@@ -60,7 +63,7 @@ dataloader = DataLoader(dataset,
 for i, (fname, fobj) in enumerate(dataset):
     print(fname)
     print(fobj)
-    if i == 0:
+    if i == 1:
         break
 
 ```
