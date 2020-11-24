@@ -13,7 +13,6 @@ normalize = transforms.Normalize(
     std=[0.229, 0.224, 0.225])
     
 preproc = transforms.Compose([
-    transforms.RandomResizedCrop(224),
     transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
     normalize,
@@ -52,13 +51,17 @@ for inputs, targets in loader:
 2. Using shards or tar/zip files: We recommend using shards to facilitate parallel IO and shuffling. After every epoch, 
 dataset.epoch needs to be updated when shuffling is enabled. 
 ```python
-dataset = (
-    S3IterableDataset('s3://path/to/image_data/folder')
-)
+from torch.utils.data import DataLoader
+url_list= ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-000000.tar"]
+dataset = S3IterableDataset(url_list)
+dataloader = DataLoader(dataset,
+                        num_workers=1)
 
-loader = torch.utils.data.DataLoader(dataset, num_workers=8)
-for inputs, targets in loader:
-    ... # training
+for i, (fname, fobj) in enumerate(dataset):
+    print(fname)
+    print(fobj)
+    if i == 0:
+        break
 
 ```
 
