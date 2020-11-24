@@ -249,6 +249,7 @@ S3Init::S3Init()
             multi_part_download_ = false;
         }
     }
+    initializeS3Client();
 }
 
 S3Init::~S3Init() {}
