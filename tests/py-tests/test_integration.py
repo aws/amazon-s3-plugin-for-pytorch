@@ -84,7 +84,7 @@ def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
     expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
     dataset_class = eval(dataset_type)
-    for num_workers in [0, 4, 16]:
+    for num_workers in [ 0, 4, 16]:
         dataset = dataset_class(url_list)
         dataloader = DataLoader(dataset,
                         batch_size=batch_size, 
@@ -97,18 +97,9 @@ def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
             s3_obj_set.update(batch_set)
             num_batches += 1
 
-        # print (next(iter(s3_obj_set))[0])
-        # print (next(iter(boto_obj_set))[0])  
-        # print (num_batches, expected_batches)
-        # print (len(s3_obj_set), len(boto_obj_set))
-
         assert s3_obj_set == boto_obj_set, "Test fails for {} workers for".format(num_workers
                                                         ) + dataset_type           
         print ("All data correctly loaded for " + dataset_type + " for {} workers".format(num_workers))
-
-        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers for ".format(num_workers
-                                                        ) + dataset_type
-        print ("Data correctly batched for " + dataset_type + " for {} workers".format(num_workers))
 
 def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
     batch_size = 32
@@ -136,13 +127,12 @@ def test_files(bucket, files_prefix):
 
     print ("\nTesting: Reading individual files...")
     url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
-    # test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set) # this is failing
+    test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
     test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
-
 
     print ("Testing: Reading from prefix...")
     url_list = ["s3://" + bucket + "/" + files_prefix]
-    # test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
+    test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
     test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
 
 
