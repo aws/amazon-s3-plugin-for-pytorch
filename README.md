@@ -56,21 +56,49 @@ for i, (fname, fobj) in enumerate(dataset):
 2. Using shards or tar/zip files: We recommend using shards to facilitate parallel IO and shuffling. After every epoch, 
 dataset.epoch needs to be updated when shuffling is enabled. 
 ```python
+
+import os
+import sys
+import torch
+
+import numpy as np
+from torch.utils.data import IterableDataset
+
 from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
 from torch.utils.data import DataLoader
-import io
+from functools import partial
 
-url_list= ["s3://mansmane-dev/imagenet_web_dataset/train/imagenet-train-000000.tar"]
-dataset = S3IterableDataset(url_list)
-dataloader = DataLoader(dataset,
-                        num_workers=1)
 
-for i, (fname, fobj) in enumerate(dataset):
-    print(fname)
-    print(fobj)
-    if i == 1:
-        break
+class TestDataset(IterableDataset):
+    def __init__(self, url_list):
+        self.url_list = url_list
+        self.s3_iter_dataset = S3IterableDataset(self.url_list)
 
+
+    def my_generator(self):
+        try:
+            while True:
+                label_fname, label_fobj = next(self.s3_iter_dataset_iterator)
+                image_fname, image_fobj = next(self.s3_iter_dataset_iterator)
+
+                label = int(label_fobj)
+                yield image_fobj, label
+        except StopIteration:
+            raise StopIteration
+
+    def __iter__(self):
+        self.s3_iter_dataset_iterator = iter(self.s3_iter_dataset)
+        return self.my_generator()
+
+if __name__ == "__main__":
+    url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.tar"]
+    dataset = TestDataset(url_list)
+    dataloader = DataLoader(dataset,
+        batch_size=32,
+        num_workers=64)
+
+    for i, (image, label) in enumerate(dataloader):
+        print (label)
 ```
 
 ### Creating shards
