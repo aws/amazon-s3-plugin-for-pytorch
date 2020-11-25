@@ -97,9 +97,17 @@ def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
             s3_obj_set.update(batch_set)
             num_batches += 1
 
-        assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
+        # print (next(iter(s3_obj_set))[0])
+        # print (next(iter(boto_obj_set))[0])  
+        # print (num_batches, expected_batches)
+        # print (len(s3_obj_set), len(boto_obj_set))
+
+        assert s3_obj_set == boto_obj_set, "Test fails for {} workers for".format(num_workers
+                                                        ) + dataset_type           
         print ("All data correctly loaded for " + dataset_type + " for {} workers".format(num_workers))
-        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
+
+        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers for ".format(num_workers
+                                                        ) + dataset_type
         print ("Data correctly batched for " + dataset_type + " for {} workers".format(num_workers))
 
 def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
@@ -112,7 +120,31 @@ def test_S3Dataset(boto_obj_set, bucket, prefix_list):
     batch_size = 32
     url_list1 = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
     url_list2 = ["s3://ydaiming-test-data2/integration_tests/files"]
-    test_workers("S3Dataset", url_list1,  batch_size, boto_obj_set)
+    test_workers("S3Dataset", url_list2,  batch_size, boto_obj_set)
+
+def test_tarfiles(bucket, tarfiles_list):
+    print("Testing: Reading tarfile...")
+    boto_obj_set = read_using_boto(bucket, tarfiles_list)
+    batch_size = 32
+    url_list = ["s3://" + bucket + "/" + tarfile for tarfile in tarfiles_list]
+    test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
+
+def test_files(bucket, files_prefix):
+    prefix_list = get_file_list(bucket, files_prefix)
+    boto_obj_set = read_using_boto(bucket, prefix_list)
+    batch_size = 32
+
+    print ("\nTesting: Reading individual files...")
+    url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+    # test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set) # this is failing
+    test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
+
+
+    print ("Testing: Reading from prefix...")
+    url_list = ["s3://" + bucket + "/" + files_prefix]
+    # test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
+    test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
+
 
 if __name__ == "__main__":
     print ("Starting the Tests\n")
@@ -120,12 +152,10 @@ if __name__ == "__main__":
     bucket = "ydaiming-test-data2"
 
     tar_prefix_list = ["integration_tests/imagenet-train-000000.tar"]
-    boto_read_set = read_using_boto(bucket, tar_prefix_list)
-    test_S3IterableDataset(boto_read_set, bucket, tar_prefix_list)
+    test_tarfiles(bucket, tar_prefix_list)
 
-    files_prefix = "integration_tests/files/"
-    prefix_list = get_file_list(bucket, files_prefix)
-    boto_read_set = read_using_boto(bucket, prefix_list)
-    test_S3Dataset(boto_read_set, bucket, prefix_list)
+    files_prefix = "integration_tests/files"
+    assert files_prefix[-1] != "/", "Enter Prefix without trailing \"/\" else error"
+    test_files(bucket, files_prefix)
 
     print ("\nAll tests passed successfully")
