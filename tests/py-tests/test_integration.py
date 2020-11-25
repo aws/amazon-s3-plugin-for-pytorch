@@ -79,55 +79,40 @@ def get_file_list(bucket, files_prefix):
     file_list = [summary.key for summary in my_bucket.objects.filter(Prefix=files_prefix)]
     return file_list[1:]
 
-def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
+def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
     s3_obj_set = set()
+    expected_batches = math.ceil(len(boto_obj_set)/batch_size)
+
+    dataset_class = eval(dataset_type)
+    for num_workers in [0, 2, 4, 16]:
+        dataset = dataset_class(url_list)
+        dataloader = DataLoader(dataset,
+                        batch_size=batch_size, 
+                        num_workers=num_workers)
+        print ("\nTesting " + dataset_type + " with {} workers".format(num_workers))
+        num_batches = 0
+        for fname, fobj in dataloader:
+            fname = [x.split("/")[-1] for x in fname]
+            batch_set = set(map(tuple, zip(fname, fobj)))
+            s3_obj_set.update(batch_set)
+            num_batches += 1
+
+        assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
+        print ("All data correctly loaded for " + dataset_type + " for {} workers".format(num_workers))
+        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
+        print ("Data correctly batched for " + dataset_type + " for {} workers".format(num_workers))
+
+def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
     batch_size = 32
     url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
     
-    expected_batches = math.ceil(len(boto_obj_set)/batch_size)
+    test_workers("S3IterableDataset", url_list,  batch_size, boto_obj_set)
 
-    for num_workers in [0, 2, 4, 6, 8]:
-        dataset = S3IterableDataset(url_list)
-        dataloader = DataLoader(dataset,
-                        batch_size=batch_size, 
-                        num_workers=num_workers)
-        print ("\nTesting S3Iterable dataset with {} workers".format(num_workers))
-        num_batches = 0
-        for fname, fobj in dataloader:
-           batch_set = set(map(tuple, zip(fname, fobj)))
-           s3_obj_set.update(batch_set)
-           num_batches += 1
-        assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
-        print ("All data correctly loaded for s3Iterable dataset for {} workers".format(num_workers))
-        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
-        print ("Data correctly batched for s3Iterable dataset for {} workers".format(num_workers))
-    
 def test_S3Dataset(boto_obj_set, bucket, prefix_list):
-    s3_obj_set = set()
     batch_size = 32
     url_list1 = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
     url_list2 = ["s3://ydaiming-test-data2/integration_tests/files"]
-
-    expected_batches = math.ceil(len(boto_obj_set)/batch_size)
-
-    for num_workers in [0, 2, 4, 6, 8]:
-        dataset = S3Dataset(url_list1)
-        dataloader = DataLoader(dataset,
-                        batch_size=batch_size, 
-                        num_workers=num_workers)
-        print ("\nTesting S3 dataset with {} workers".format(num_workers))
-        num_batches = 0
-        
-        for fname, fobj in dataloader:
-           fname = [x.split("/")[-1] for x in fname]
-           batch_set = set(map(tuple, zip(fname, fobj)))
-           s3_obj_set.update(batch_set)
-           num_batches += 1
-        
-        assert s3_obj_set == boto_obj_set, "Test fails for {} workers".format(num_workers)
-        print ("All data correctly loaded for S3 dataset for {} workers".format(num_workers))
-        assert expected_batches == num_batches, "Data Incorrectly batched for {} workers".format(num_workers)
-        print ("Data correctly batched for S3 dataset for {} workers".format(num_workers))
+    test_workers("S3Dataset", url_list1,  batch_size, boto_obj_set)
 
 if __name__ == "__main__":
     print ("Starting the Tests\n")
