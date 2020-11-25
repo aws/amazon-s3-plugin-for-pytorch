@@ -81,7 +81,6 @@ def get_file_list(bucket, files_prefix):
 
 def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
     s3_obj_set = set()
-    expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
     dataset_class = eval(dataset_type)
     for num_workers in [ 0, 4, 16]:
