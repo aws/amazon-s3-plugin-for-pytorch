@@ -84,7 +84,7 @@ def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
     expected_batches = math.ceil(len(boto_obj_set)/batch_size)
 
     dataset_class = eval(dataset_type)
-    for num_workers in [0, 2, 4, 16]:
+    for num_workers in [0, 4, 16]:
         dataset = dataset_class(url_list)
         dataloader = DataLoader(dataset,
                         batch_size=batch_size, 
