@@ -1,8 +1,7 @@
 """
 Datasets:
-    One Imagenet folder use
-    Some Coco images
-    Some text files?
+    WebDataset - Tar 
+    Files in Folder - ImageNet .jpg files and .cls files
 
 Design to catch any bug in code:
     Number of files being read
@@ -42,11 +41,8 @@ Discuss:
     S3Iterable will not have sampler
 """
 
-# from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
-# from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
-
-from s3dataset import S3Dataset, S3IterableDataset, S3BotoSet
-from s3dataset import tardata, zipdata
+from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
+from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
 
 from torch.utils.data.distributed import DistributedSampler
 
