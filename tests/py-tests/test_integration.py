@@ -44,12 +44,9 @@ Discuss:
 from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
 from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
 
-from torch.utils.data.distributed import DistributedSampler
-
 import io
 import math
 import boto3
-import sys
 from torch.utils.data import DataLoader
 
 def read_using_boto(bucket, prefix_list):
