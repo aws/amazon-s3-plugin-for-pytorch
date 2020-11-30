@@ -101,7 +101,7 @@ if __name__ == "__main__":
 
     for i, (image, label) in enumerate(dataloader):
         for j in range(len(label)):
-            print (image[j][0:10], label[j])
+            print ("First 10 bytes of binary image blob: ", image[j][0:10], "\nImage lable ", label[j])
 ```
 
 ### Creating shards
