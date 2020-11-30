@@ -1,53 +1,10 @@
-"""
-Datasets:
-    WebDataset - Tar 
-    Files in Folder - ImageNet .jpg files and .cls files
-
-Design to catch any bug in code:
-    Number of files being read
-    Size of files being read
-    Content of files? - specified by the size of files read
-
-    Should work by specifying just the prefix folder, url_list, 
-
-Should test both S3Dataset, S3IterableDataset
-
-
-Logic:
-Test1: Establishes all objects are being read from S3
-    Read objects using a Dataloader with S3Dataset and S3IterableDataset
-    Keep putting object-names with sizes - tuples - in a set.
-    Maintain a count of objects read
-
-    Compare the same things after reading from Boto
-    Boto works so plugin should be working correctly
-
-Test2: Establish Dataloader works correctly 
-    number of batches read in should be correct. 
-
-Test3:
-    Add for shuffling, check other functionalities
-
-Add later: 
-    check to see if shuffling is working.
-    set should be same, but lists should not be equal.
-
-    check both  tar and zip files
-
-    remove hardcoding by adding argparser
-
-Discuss:
-    Do we add sampler for S3Dataset??
-    S3Iterable will not have sampler
-"""
-
-from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
-from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
-
 import io
 import math
 import boto3
 from torch.utils.data import DataLoader
+
+from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
+from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
 
 def read_using_boto(bucket, prefix_list):
         s= boto3.client('s3')
