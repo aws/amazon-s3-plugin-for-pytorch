@@ -59,7 +59,7 @@ def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
         print ("All data correctly loaded for " + dataset_type + " for {} workers".format(num_workers))
 
 def test_tarfiles(bucket, tarfiles_list):
-    print("Testing: Reading tarfile...")
+    print("\nINITIATING: TARFILES READ TEST")
     boto_obj_set = read_using_boto(bucket, tarfiles_list)
     batch_size = 32
     url_list = ["s3://" + bucket + "/" + tarfile for tarfile in tarfiles_list]
@@ -70,26 +70,24 @@ def test_files(bucket, files_prefix):
     boto_obj_set = read_using_boto(bucket, prefix_list)
     batch_size = 32
 
-    print ("\nTesting: Reading individual files...")
+    print ("\nINITIATING: INDIVIDUAL FILE READ TEST")
     url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
     test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
     test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
 
-    print ("Testing: Reading from prefix...")
+    print ("\nINITIATING: READ FILES FROM PREFIX TEST")
     url_list = ["s3://" + bucket + "/" + files_prefix]
     test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
     test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
 
 def test_shuffle(bucket, files_prefix):
     prefix_list = get_file_list(bucket, files_prefix)
-
-    print ("\nTesting: Shuffling files...")
     url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
     batch_size = 32
     shuffled_sets = defaultdict(set)
     shuffled_lists = defaultdict(list)
 
-    print ("\nTesting S3IteratorDataset shuffling....")
+    print ("\nINITIATING SHUFFLE TEST")
     for shuffle_urls in [True, False]:
         dataset = S3IterableDataset(url_list, shuffle_urls=shuffle_urls)
         dataloader = DataLoader(dataset,
