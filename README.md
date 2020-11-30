@@ -82,7 +82,7 @@ class TestDataset(IterableDataset):
                 image_fname, image_fobj = next(self.s3_iter_dataset_iterator)
 
                 label = int(label_fobj)
-                yield image_fobj, label
+                yield image_fobj[:10], label
         except StopIteration:
             raise StopIteration
 
@@ -98,6 +98,7 @@ if __name__ == "__main__":
         num_workers=64)
 
     for i, (image, label) in enumerate(dataloader):
+        print (image)
         print (label)
 ```
 
