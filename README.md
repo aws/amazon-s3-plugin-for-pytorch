@@ -62,6 +62,7 @@ import sys
 import torch
 
 import numpy as np
+from PIL import Image
 from torch.utils.data import IterableDataset
 
 from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
@@ -82,7 +83,7 @@ class TestDataset(IterableDataset):
                 image_fname, image_fobj = next(self.s3_iter_dataset_iterator)
 
                 label = int(label_fobj)
-                yield image_fobj[:10], label
+                yield image_fobj, label
         except StopIteration:
             raise StopIteration
 
@@ -91,15 +92,16 @@ class TestDataset(IterableDataset):
         return self.my_generator()
 
 if __name__ == "__main__":
+    batch_size = 32
     url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.tar"]
     dataset = TestDataset(url_list)
     dataloader = DataLoader(dataset,
-        batch_size=32,
+        batch_size=batch_size,
         num_workers=64)
 
     for i, (image, label) in enumerate(dataloader):
-        print (image)
-        print (label)
+        for j in range(len(label)):
+            print (image[j][0:10], label[j])
 ```
 
 ### Creating shards
