@@ -58,18 +58,6 @@ def test_workers(dataset_type, url_list,  batch_size, boto_obj_set):
                                                         ) + dataset_type           
         print ("All data correctly loaded for " + dataset_type + " for {} workers".format(num_workers))
 
-def test_S3IterableDataset(boto_obj_set, bucket, prefix_list):
-    batch_size = 32
-    url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
-    
-    test_workers("S3IterableDataset", url_list,  batch_size, boto_obj_set)
-
-def test_S3Dataset(boto_obj_set, bucket, prefix_list):
-    batch_size = 32
-    url_list1 = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
-    url_list2 = ["s3://ydaiming-test-data2/integration_tests/files"]
-    test_workers("S3Dataset", url_list2,  batch_size, boto_obj_set)
-
 def test_tarfiles(bucket, tarfiles_list):
     print("Testing: Reading tarfile...")
     boto_obj_set = read_using_boto(bucket, tarfiles_list)
