@@ -1,6 +1,7 @@
 import io
 import math
 import boto3
+from collections import defaultdict
 from torch.utils.data import DataLoader
 
 from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
@@ -91,6 +92,30 @@ def test_files(bucket, files_prefix):
     test_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
     test_workers("S3Dataset", url_list, batch_size, boto_obj_set)
 
+def test_shuffle(bucket, files_prefix):
+    prefix_list = get_file_list(bucket, files_prefix)
+
+    print ("\nTesting: Shuffling files...")
+    url_list = ["s3://" + bucket + "/" + prefix for prefix in prefix_list]
+    batch_size = 32
+    shuffled_sets = defaultdict(set)
+    shuffled_lists = defaultdict(list)
+
+    print ("\nTesting S3IteratorDataset shuffling....")
+    for shuffle_urls in [True, False]:
+        dataset = S3IterableDataset(url_list, shuffle_urls=shuffle_urls)
+        dataloader = DataLoader(dataset,
+                        batch_size=batch_size)
+        
+        for fname, fobj in dataloader:
+            fname = [x.split("/")[-1] for x in fname]
+            batch_set = set(map(tuple, zip(fname, fobj)))
+            batch_list = list(map(tuple, zip(fname, fobj)))
+            shuffled_sets[str(shuffle_urls)].update(batch_set)
+            shuffled_lists[str(shuffle_urls)].append(batch_list)
+    assert shuffled_sets['True'] == shuffled_sets['False'] and shuffled_lists['True'] != shuffled_lists['False'], \
+            "Shuffling not working correctly"
+    print ("Shuffle test passed for S3IterableDataset")
 
 if __name__ == "__main__":
     print ("Starting the Tests\n")
@@ -103,5 +128,7 @@ if __name__ == "__main__":
     files_prefix = "integration_tests/files"
     assert files_prefix[-1] != "/", "Enter Prefix without trailing \"/\" else error"
     test_files(bucket, files_prefix)
+
+    test_shuffle(bucket, files_prefix)
 
     print ("\nAll tests passed successfully")
