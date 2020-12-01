@@ -44,7 +44,7 @@ dataset = S3IterableDataset(url_list)
 dataloader = DataLoader(dataset,
                         num_workers=1)
 
-for i, (fname, fobj) in enumerate(dataset):
+for i, (fname, fobj) in enumerate(dataloader):
     print(fname)
     print(fobj)
     if i == 0:
