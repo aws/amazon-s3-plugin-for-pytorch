@@ -127,7 +127,7 @@ class S3IterableDataset(IterableDataset):
         self.shuffle_urls = shuffle_urls
         self.urls_list = list()
         for url in urls:
-            if not file_exists(url):
+            if not self.handler.file_exists(url):
                 url_objects = self.handler.list_files(url)
                 assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
                 self.urls_list.extend(url_objects)
