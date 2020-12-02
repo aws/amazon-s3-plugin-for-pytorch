@@ -1,6 +1,3 @@
-//
-// Created by Nagmote, Roshani on 5/12/20.
-//
 #include "s3_io.h"
 
 #include <aws/core/Aws.h>
@@ -27,7 +24,6 @@
 
 namespace awsio {
 namespace {
-// static const char *kS3FileSystemAllocationTag = "S3FileSystemAllocation";
 static const size_t s3ReadBufferSize = 120 * 1024 * 1024;               // 16 MB
 static const uint64_t s3MultiPartDownloadChunkSize = 50 * 1024 * 1024;  // 50 MB
 static const int downloadRetries = 3;
@@ -38,7 +34,6 @@ static const int S3GetFilesMaxKeys = 100;
 Aws::Client::ClientConfiguration &setUpS3Config() {
     static Aws::Client::ClientConfiguration cfg;
     Aws::String config_file;
-    // If AWS_CONFIG_FILE is set then use it, otherwise use ~/.aws/config.
     const char *config_file_env = getenv("AWS_CONFIG_FILE");
     if (config_file_env) {
         config_file = config_file_env;
@@ -150,10 +145,6 @@ class S3FS {
     }
 
     size_t readS3Client(uint64_t offset, size_t n, char *buffer) {
-        std::cout << "Read File from S3 s3://" << this->bucket_name_ << "/"
-                  << this->object_name_ << " from " << offset << " for n:" << n
-                  << std::endl;
-
         Aws::S3::Model::GetObjectRequest getObjectRequest;
 
         getObjectRequest.WithBucket(this->bucket_name_.c_str())
@@ -186,8 +177,6 @@ class S3FS {
     }
 
     size_t readS3TransferManager(uint64_t offset, size_t n, char *buffer) {
-        std::cout << "ReadFilefromS3 s3:// using Transfer Manager API: ";
-
         auto create_stream_fn = [&]() {  // create stream lambda fn
             return Aws::New<S3UnderlyingStream>(
                 "S3ReadStream",
@@ -196,15 +185,12 @@ class S3FS {
                     n));
         };
 
-        std::cout << "Created stream to read with transferManager";
-
         // This buffer is what we used to initialize streambuf and is in memory
         std::shared_ptr<Aws::Transfer::TransferHandle> downloadHandle =
             this->transfer_manager_.get()->DownloadFile(
                 this->bucket_name_.c_str(), this->object_name_.c_str(), offset,
                 n, create_stream_fn);
         downloadHandle->WaitUntilFinished();
-        std::cout << "File download to memory finished!" << std::endl;
 
         Aws::OFStream storeFile(object_name_.c_str(),
                                 Aws::OFStream::out | Aws::OFStream::trunc);
