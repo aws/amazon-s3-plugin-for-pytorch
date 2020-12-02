@@ -31,7 +31,7 @@ def create_data_samples_from_file(fileobj):
 class s3_dataset(IterableDataset):
     """Dataset used for training.
     Each file contains approximately 150K samples/file.
-    Yields one formatted sample.
+    Yields one sample at a time.
     """
     def __init__(self, max_pred_length):
         self.s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
