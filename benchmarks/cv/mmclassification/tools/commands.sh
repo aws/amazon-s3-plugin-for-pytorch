@@ -2,15 +2,16 @@
 conda activate pytorch;
 cd /home/ubuntu/aws_io/benchmarks/cv/mmclassification;
 
-for LATENCY in '10ms' '0ms' '5ms'
+for LATENCY in '10ms'
 do
-  for N_WORKER in {8,}
+  for N_WORKER in {16,}
   do
-    for PREFETCH_FACTOR in {2,8}
+    for PREFETCH_FACTOR in {4,}
     do
       SECONDS=0
       EPOCH_NUM=2
-      WORK_DIR=work_dirs/${LATENCY}_trial0_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_w_quesize
+#      WORK_DIR=work_dirs/${LATENCY}_trial0_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_w_quesize
+      WORK_DIR=work_dirs/test
       /home/ubuntu/.conda/envs/pytorch/bin/python -u -m torch.distributed.launch \
       --nproc_per_node=8 --master_port=29500 /home/ubuntu/aws_io/benchmarks/cv/mmclassification/tools/train.py \
       configs/imagenet/resnet50_io_latency_${LATENCY}.py \
