@@ -12,14 +12,11 @@ from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
 def create_data_samples_from_file(fileobj):
     """Convert bytes from S3IterableDataset to numpy arrays.
     Helper function for class s3_dataset.
-
     Returns a list of six numpy arrays which each contain
     data (by key) for all samples in a file.
-
     Keyword arguments:
-    fileobj -- the bytes string provided by S3IterableDataset        
+    fileobj -- the bytes string provided by S3IterableDataset
     """
-    data_file = []
     keys = ['input_ids', 'input_mask', 'segment_ids', \
         'masked_lm_positions', 'masked_lm_ids', 'next_sentence_labels']
     dataset = io.BytesIO(fileobj)
@@ -57,6 +54,5 @@ class s3_dataset(IterableDataset):
 def main():
     s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
     train_dataset = s3_dataset(s3_directory=s3_directory)
-    train_dataloader = DataLoader(train_dataset, pin_memory=True)
-    for step, sample in enumerate(train_dataloader):
+    for sample in train_dataset:
         input_ids, input_mask, segment_ids, masked_lm_positions, masked_lm_ids, next_sentence_labels = sample
