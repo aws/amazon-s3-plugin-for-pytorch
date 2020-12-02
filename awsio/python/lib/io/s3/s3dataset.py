@@ -238,7 +238,6 @@ class S3BotoSet(Dataset): # pragma: no cover
 
     def __getitem__(self, idx):
         filename = self.urls_list[idx]
-        print('downloading...')
         filename = filename.replace('s3://' + self.bucket_name + '/', '')
         fs = io.BytesIO()
         s= boto3.client('s3')
@@ -278,7 +277,6 @@ class S3BotoIterableDataset(IterableDataset): # pragma: no cover
             return self.urls_list
 
     def download_data(self, filename):
-        print('downloading...')
         filename = filename.replace('s3://' + self.bucket_name + '/', '')
         fs = io.BytesIO()
         s= boto3.client('s3')
