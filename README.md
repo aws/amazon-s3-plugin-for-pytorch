@@ -190,5 +190,7 @@ To run the sample, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSIO
 ## To Do
 1. List all file format supported 
 2. Can we have public s3 buckets so that the example s3 link will work for all customers?
-3. Are we going to add S3 boto dataset as well?
+3. Shuffle dataset.
+4. We can not release imagenet example
+
  
