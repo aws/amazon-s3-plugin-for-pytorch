@@ -30,12 +30,10 @@ def create_data_samples_from_file(fileobj):
 
 class s3_dataset(IterableDataset):
     """Dataset used for training.
-    Each file contains approximately 150K samples/file.
     Yields one sample at a time.
     """
-    def __init__(self, max_pred_length):
-        self.s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
-        self.max_pred_length = max_pred_length
+    def __init__(self, s3_directory):
+        self.s3_directory = s3_directory
 
     def data_generator(self):
         try:
@@ -44,9 +42,7 @@ class s3_dataset(IterableDataset):
                 # data_samples: list of six numpy arrays (each array contains all samples)
                 data_samples = create_data_samples_from_file(fileobj)
                 # transpose data_samples so that each index represents one sample
-                data_sample_transpose = list(zip(*data_samples))
-                random.shuffle(data_sample_transpose)
-                for sample in data_sample_transpose:
+                for sample in list(zip(*data_samples)):
                     yield sample
 
         except StopIteration as e:
@@ -59,9 +55,8 @@ class s3_dataset(IterableDataset):
 
 
 def main():
-    train_dataset = s3_dataset(max_pred_length=max_predictions_per_seq)
+    s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
+    train_dataset = s3_dataset(s3_directory=s3_directory)
     train_dataloader = DataLoader(train_dataset, pin_memory=True)
     for step, sample in enumerate(train_dataloader):
-        training_steps += 1
-        sample = [elem.to(device) for elem in sample]
         input_ids, segment_ids, input_mask, masked_lm_labels, next_sentence_labels = sample
