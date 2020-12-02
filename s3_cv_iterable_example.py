@@ -38,4 +38,4 @@ if __name__ == "__main__":
     dataset = ImageNetS3(url_list)
 
     for image, label in islice(dataset, 0, 3):
-            print("First 10 bytes of binary image blob: ", image.shape, "\nImage lable ", label)
+            print(image.shape, label)
