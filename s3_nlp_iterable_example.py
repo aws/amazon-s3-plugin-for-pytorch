@@ -51,11 +51,8 @@ class s3_dataset(IterableDataset):
         return self.data_generator()
 
 
-def main():
-    s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
-    train_dataset = s3_dataset(s3_directory=s3_directory)
-    for sample in islice(train_dataset, 0, 3):
-        print(sample)
 
-
-main()
+s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
+train_dataset = s3_dataset(s3_directory=s3_directory)
+for sample in islice(train_dataset, 0, 1):
+    print(sample)

@@ -32,9 +32,8 @@ class ImageNetS3(IterableDataset):
         return self.my_generator()
 
 
-if __name__ == "__main__":
-    url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.tar"]
-    dataset = ImageNetS3(url_list)
+url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.tar"]
+dataset = ImageNetS3(url_list)
 
-    for image, label in islice(dataset, 0, 3):
-            print(image.shape, label)
+for image, label in islice(dataset, 0, 3):
+        print(image.shape, label)
