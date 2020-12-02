@@ -33,7 +33,6 @@ class ImageNetS3(IterableDataset):
 
 
 if __name__ == "__main__":
-    batch_size = 32
     url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.tar"]
     dataset = ImageNetS3(url_list)
 
