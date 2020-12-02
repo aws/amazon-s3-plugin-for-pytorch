@@ -59,4 +59,4 @@ def main():
     train_dataset = s3_dataset(s3_directory=s3_directory)
     train_dataloader = DataLoader(train_dataset, pin_memory=True)
     for step, sample in enumerate(train_dataloader):
-        input_ids, segment_ids, input_mask, masked_lm_labels, next_sentence_labels = sample
+        input_ids, input_mask, segment_ids, masked_lm_positions, masked_lm_ids, next_sentence_labels = sample
