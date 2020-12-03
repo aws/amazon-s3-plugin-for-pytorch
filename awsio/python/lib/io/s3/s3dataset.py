@@ -117,6 +117,9 @@ class S3Dataset(Dataset):
                 self.urls_list.append(url)
             else:
                 self.urls_list = [url]
+        MB = 1024**2
+        self.config = TransferConfig(max_concurrency=10,
+                                     multipart_threshold=20 * MB)
         self.bucket_name = parse_s3_bucket(self.urls_list[0])
 
     def __len__(self):
@@ -152,6 +155,9 @@ class S3IterableDataset(IterableDataset):
                 self.urls_list.append(url)
             else:
                 self.urls_list = [url]
+        MB = 1024**2
+        self.config = TransferConfig(max_concurrency=10,
+                                     multipart_threshold=20 * MB)
         self.bucket_name = parse_s3_bucket(self.urls_list[0])
 
     @property
