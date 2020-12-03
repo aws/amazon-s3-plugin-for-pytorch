@@ -169,6 +169,7 @@ class S3IterableDataset(IterableDataset):
             return self.urls_list
 
     def download_data(self, filename):
+        filename = filename.replace('s3://' + self.bucket_name + '/', '')
         fs = io.BytesIO()
         s = boto3.client('s3')
         s.download_fileobj(self.bucket_name, filename, fs, Config=self.config)
