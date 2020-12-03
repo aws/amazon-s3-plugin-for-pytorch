@@ -12,7 +12,8 @@ from itertools import chain
 meta_prefix = "__"
 meta_suffix = "__"
 
-def reraise_exception(exn): # pragma: no cover
+
+def reraise_exception(exn):  # pragma: no cover
     """Called in an exception handler to re-raise the exception."""
     raise exn
 
@@ -25,26 +26,27 @@ def tardata(fileobj, skip_meta=r"__[^/]*__($|/)", handler=reraise_exception):
         stream = tarfile.open(fileobj=io.BytesIO(fileobj), mode="r|*")
         for tarinfo in stream:
             try:
-                if not tarinfo.isreg(): # pragma: no cover
+                if not tarinfo.isreg():  # pragma: no cover
                     continue
                 fname = tarinfo.name
-                if fname is None: # pragma: no cover
+                if fname is None:  # pragma: no cover
                     continue
                 if ("/" not in fname and fname.startswith(meta_prefix)
-                        and fname.endswith(meta_suffix)): # pragma: no cover
+                        and fname.endswith(meta_suffix)):  # pragma: no cover
                     # skipping metadata for now
                     continue
-                if skip_meta is not None and re.match(skip_meta, fname): # pragma: no cover
+                if skip_meta is not None and re.match(
+                        skip_meta, fname):  # pragma: no cover
                     continue
                 data = stream.extractfile(tarinfo).read()
                 yield fname, data
-            except Exception as exn: # pragma: no cover
+            except Exception as exn:  # pragma: no cover
                 if handler(exn):
                     continue
                 else:
                     break
         del stream
-    except Exception as exn: # pragma: no cover
+    except Exception as exn:  # pragma: no cover
         handler(exn)
 
 
@@ -58,9 +60,9 @@ def zipdata(fileobj, handler=reraise_exception):
                 for file_ in zfile.namelist():
                     data = zfile.read(file_)
                     yield file_, data
-            except Exception as exn: # pragma: no cover
+            except Exception as exn:  # pragma: no cover
                 print("Error:", exn)
-    except Exception as exn: # pragma: no cover
+    except Exception as exn:  # pragma: no cover
         print("Error:", exn)
 
 
@@ -83,6 +85,12 @@ def list_files(url):
     return handler.list_files(url)
 
 
+def parse_s3_bucket(url):
+    """Returns the bucket name of the valid s3 url.
+    """
+    return url[5:].split('/')[0].strip()
+
+
 class S3Dataset(Dataset):
     """A mapped-style dataset for objects in s3.
     """
@@ -100,20 +108,27 @@ class S3Dataset(Dataset):
         for url in urls:
             if not self.handler.file_exists(url):
                 url_objects = self.handler.list_files(url)
-                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+                assert len(
+                    url_objects
+                ) != 0, f"The directory {url} does not contain any objects. "
+                "Please make sure it is a valid path."
                 self.urls_list.extend(url_objects)
             elif self.urls_list:
                 self.urls_list.append(url)
             else:
                 self.urls_list = [url]
+        self.bucket_name = parse_s3_bucket(self.urls_list[0])
 
     def __len__(self):
         return len(self.urls_list)
 
     def __getitem__(self, idx):
         filename = self.urls_list[idx]
-        fileobj = self.handler.s3_read(filename)
-        return filename, fileobj
+        filename = filename.replace('s3://' + self.bucket_name + '/', '')
+        fs = io.BytesIO()
+        s = boto3.client('s3')
+        s.download_fileobj(self.bucket_name, filename, fs, Config=self.config)
+        return self.urls_list[idx], fs.getvalue()
 
 
 class S3IterableDataset(IterableDataset):
@@ -129,12 +144,15 @@ class S3IterableDataset(IterableDataset):
         for url in urls:
             if not self.handler.file_exists(url):
                 url_objects = self.handler.list_files(url)
-                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+                assert len(
+                    url_objects
+                ) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
                 self.urls_list.extend(url_objects)
             elif self.urls_list:
                 self.urls_list.append(url)
             else:
                 self.urls_list = [url]
+        self.bucket_name = parse_s3_bucket(self.urls_list[0])
 
     @property
     def shuffled_list(self):
@@ -145,16 +163,19 @@ class S3IterableDataset(IterableDataset):
             return self.urls_list
 
     def download_data(self, filename):
+        fs = io.BytesIO()
+        s = boto3.client('s3')
+        s.download_fileobj(self.bucket_name, filename, fs, Config=self.config)
         if filename[-3:] == "tar":
-            tarfile = tardata(self.handler.s3_read(filename))
+            tarfile = tardata(fs.getvalue())
             for fname, content in tarfile:
                 yield fname, content
         elif filename[-3:] == "zip":
-            zipfile = zipdata(self.handler.s3_read(filename))
+            zipfile = zipdata(fs.getvalue())
             for fname, content in zipfile:
                 yield fname, content
         else:
-            yield filename, self.handler.s3_read(filename)
+            yield filename, fs.getvalue()
 
     def get_stream(self, urls_list):
         return chain.from_iterable(map(self.download_data, urls_list))
@@ -210,13 +231,15 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
                     shufbuf.append(item)
                 except StopIteration:
                     break
-        except GeneratorExit: # pragma: no cover
+        except GeneratorExit:  # pragma: no cover
             pass
+
 
 import boto3
 from boto3.s3.transfer import TransferConfig
 
-class S3BotoSet(Dataset): # pragma: no cover
+
+class S3BotoSet(Dataset):  # pragma: no cover
     """A mapped-style dataset for objects in s3.
     """
     def __init__(self, bucket_name, prefix):
@@ -224,12 +247,14 @@ class S3BotoSet(Dataset): # pragma: no cover
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
         url_objects = self.handler.list_files(url)
-        assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+        assert len(
+            url_objects
+        ) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
         self.urls_list.extend(url_objects)
 
         MB = 1024**2
         self.config = TransferConfig(max_concurrency=10,
-                        multipart_threshold = 20 * MB)
+                                     multipart_threshold=20 * MB)
         self.bucket_name = bucket_name
         self.prefix = prefix
 
@@ -241,15 +266,13 @@ class S3BotoSet(Dataset): # pragma: no cover
         print('downloading...')
         filename = filename.replace('s3://' + self.bucket_name + '/', '')
         fs = io.BytesIO()
-        s= boto3.client('s3')
-        s.download_fileobj(self.bucket_name,
-                                filename,
-                                fs,
-                                Config=self.config)
+        s = boto3.client('s3')
+        s.download_fileobj(self.bucket_name, filename, fs, Config=self.config)
 
         return self.urls_list[idx], fs.getvalue()
 
-class S3BotoIterableDataset(IterableDataset): # pragma: no cover
+
+class S3BotoIterableDataset(IterableDataset):  # pragma: no cover
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
@@ -258,14 +281,16 @@ class S3BotoIterableDataset(IterableDataset): # pragma: no cover
         self.handler = _pywrap_s3_io.S3Init()
         self.urls_list = list()
         url_objects = self.handler.list_files(url)
-        assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
+        assert len(
+            url_objects
+        ) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
         self.urls_list.extend(url_objects)
         self.epoch = 0
         self.shuffle_urls = shuffle_urls
 
         MB = 1024**2
         self.config = TransferConfig(max_concurrency=10,
-                        multipart_threshold = 20 * MB)
+                                     multipart_threshold=20 * MB)
         self.bucket_name = bucket_name
         self.prefix = prefix
 
@@ -281,11 +306,8 @@ class S3BotoIterableDataset(IterableDataset): # pragma: no cover
         print('downloading...')
         filename = filename.replace('s3://' + self.bucket_name + '/', '')
         fs = io.BytesIO()
-        s= boto3.client('s3')
-        s.download_fileobj(self.bucket_name,
-                                filename,
-                                fs,
-                                Config=self.config)
+        s = boto3.client('s3')
+        s.download_fileobj(self.bucket_name, filename, fs, Config=self.config)
 
         file_content = fs.getvalue()
         if filename[-3:] == "tar":
@@ -303,7 +325,7 @@ class S3BotoIterableDataset(IterableDataset): # pragma: no cover
         return chain.from_iterable(map(self.download_data, urls_list))
 
     def worker_dist(self, urls):
-        if dist.is_initialized() :
+        if dist.is_initialized():
             world_size = dist.get_world_size()
             rank = dist.get_rank()
             total_size = len(urls)
@@ -324,7 +346,6 @@ class S3BotoIterableDataset(IterableDataset): # pragma: no cover
 
     def __len__(self):
         return len(self.urls_list)
-
 
     def set_epoch(self, epoch):
         self.epoch = epoch
