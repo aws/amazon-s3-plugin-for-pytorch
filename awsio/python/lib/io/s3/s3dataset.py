@@ -204,6 +204,8 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
         try:
             while True:
                 try:
+                    if self.buffer_size == 0:
+                        break
                     evict_idx = random.randint(0, self.buffer_size - 1)
                     yield shufbuf.pop(evict_idx)
                     item = next(dataset_iter)
