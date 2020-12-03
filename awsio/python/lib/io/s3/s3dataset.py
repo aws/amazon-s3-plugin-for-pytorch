@@ -169,19 +169,21 @@ class S3IterableDataset(IterableDataset):
             return self.urls_list
 
     def download_data(self, filename):
-        filename = filename.replace('s3://' + self.bucket_name + '/', '')
+        filename_no_bucket = filename.replace('s3://' + self.bucket_name + '/',
+                                              '')
         fs = io.BytesIO()
         s = boto3.client('s3')
-        s.download_fileobj(self.bucket_name, filename, fs, Config=self.config)
+        s.download_fileobj(self.bucket_name,
+                           filename_no_bucket,
+                           fs,
+                           Config=self.config)
         if filename[-3:] == "tar":
             tarfile = tardata(fs.getvalue())
             for fname, content in tarfile:
-                fname = 's3://' + self.bucket_name + '/' + fname
                 yield fname, content
         elif filename[-3:] == "zip":
             zipfile = zipdata(fs.getvalue())
             for fname, content in zipfile:
-                fname = 's3://' + self.bucket_name + '/' + fname
                 yield fname, content
         else:
             yield filename, fs.getvalue()
