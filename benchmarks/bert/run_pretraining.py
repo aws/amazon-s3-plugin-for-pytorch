@@ -117,7 +117,7 @@ class s3_dataset(IterableDataset):
             raise e
 
     def __iter__(self):
-        self.dataset = S3IterableDataset(self.s3_directory, shuffle_urls=True)
+        self.dataset = S3IterableDataset(self.s3_directory)
         self.dataset_iter = iter(self.dataset)
         return self.data_generator()
 

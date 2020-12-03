@@ -2,7 +2,7 @@
 
 # Specify dist training params
 NUM_NODES=4
-NODE_RANK=1
+NODE_RANK=0
 MASTER_ADDR="172.31.28.254"
 MASTER_PORT="1234"
 
