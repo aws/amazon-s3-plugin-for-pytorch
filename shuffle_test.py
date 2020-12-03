@@ -6,7 +6,7 @@ from PIL import Image
 import io
 import numpy as np
 
-class ImageNetS3(IterableDataset):
+class ImageNetS3(S3IterableDataset):
     def __init__(self, url_list):
         self.url_list = url_list
         self.s3_iter_dataset = S3IterableDataset(self.url_list)
@@ -38,4 +38,6 @@ url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.ta
 dataset = ImageNetS3(url_list)
 
 for image, label in islice(dataset, 0, 3):
+
         print(image.shape, label)
+        dataset.set_epoch(1)
