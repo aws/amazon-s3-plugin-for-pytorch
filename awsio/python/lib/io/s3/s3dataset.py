@@ -226,6 +226,9 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
                     shufbuf.append(item)
                 except StopIteration:
                     break
+            while len(shufbuf) > 0:
+                evict_idx = random.randint(0, len(shufbuf) - 1)
+                yield shufbuf.pop(evict_idx)
         except GeneratorExit: # pragma: no cover
             pass
 
