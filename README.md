@@ -19,7 +19,7 @@ https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/setup.html
 Building and installing whole package takes few hours to build so just added S3 plugin which we need for this project.
 
 ```
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
+cmake . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
 make install
 ```
 
