@@ -258,8 +258,6 @@ std::shared_ptr<Aws::S3::S3Client> S3Init::initializeS3Client() {
     std::lock_guard<std::mutex> lock(this->initialization_lock_);
     if (this->s3_client_.get() == nullptr) {
         Aws::SDKOptions options;
-        options.loggingOptions.logLevel = Aws::Utils::Logging::LogLevel::Trace;
-
         Aws::InitAPI(options);
 
         // Set up the request
