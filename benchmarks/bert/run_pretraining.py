@@ -106,7 +106,7 @@ class s3_dataset(IterableDataset):
                 data_sample_transpose = list(zip(*data_samples))
                 random.shuffle(data_sample_transpose)
                 # truncating data to run 1 epoch in 2 hours
-                truncated_idx = len(data_sample_transpose) // 1000
+                truncated_idx = len(data_sample_transpose) // 10000
                 data_sample_transpose = data_sample_transpose[:truncated_idx]
                 print(f"rank : {torch.distributed.get_rank()}, filename : {filename}")
                 for sample in data_sample_transpose:
@@ -117,7 +117,7 @@ class s3_dataset(IterableDataset):
             raise e
 
     def __iter__(self):
-        self.dataset = S3IterableDataset(self.s3_directory)
+        self.dataset = S3IterableDataset(self.s3_directory, shuffle_urls=True)
         self.dataset_iter = iter(self.dataset)
         return self.data_generator()
 
