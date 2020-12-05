@@ -5,7 +5,6 @@
 - AWS-SDK-CPP (core and S3) See below for instructions
 - cmake (>v3.2)
 - python development libraries(including pybind 11) (conda install pybind11)
-- Abseil - https://abseil.io/docs/cpp/quickstart-cmake.html
 
 
 ### Adding AWS-SDK-CPP as a dependency
