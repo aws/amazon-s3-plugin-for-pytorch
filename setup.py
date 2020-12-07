@@ -25,7 +25,7 @@ from distutils.version import LooseVersion
 # metadata
 package_name = 'awsio'
 version = open('version.txt', 'r').read().strip()
-required_packages = []
+required_packages = ["torch>=1.5.1"]
 
 
 class CMakeExtension(Extension):
