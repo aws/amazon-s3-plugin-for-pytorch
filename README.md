@@ -89,7 +89,8 @@ coverage run -p --source=awsio -m pytest -v tests/py-tests/test_regions.py
 coverage run -p --source=awsio -m pytest -v tests/py-tests/test_utils.py \
 tests/py-tests/test_s3dataset.py \
 tests/py-tests/test_s3iterabledataset.py \
-tests/py-tests/test_read_datasets.py
+tests/py-tests/test_read_datasets.py \
+tests/py-tests/test_integration.py
 coverage combine
 coverage report -m
 ```
