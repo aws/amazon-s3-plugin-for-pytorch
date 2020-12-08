@@ -32,6 +32,9 @@ class ImageNetS3(IterableDataset):
         except StopIteration:
             raise StopIteration
 
+    def set_epoch(self, epoch):
+        self.s3_iter_dataset.set_epoch(epoch)
+
     def __iter__(self):
         self.s3_iter_dataset_iterator = iter(self.s3_iter_dataset)
         return self.data_generator()
@@ -46,6 +49,6 @@ preproc = transforms.Compose([
 ])
 
 dataset = ImageNetS3(url_list, transform=preproc)
+for e in range(5):
 
-for image, label in islice(dataset, 0, 3):
-    print(image.shape, label)
+    dataset.set_epoch(e)
