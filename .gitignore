@@ -1,6 +1,12 @@
 # Ignore Mac system files
 .DS_store
 
-# Ignore all log files
+# Ignore file extensions below
+*.coverage
+*.egg-info
 *.log
 *.pyc
+
+# Ignore directories
+build/
+dist/

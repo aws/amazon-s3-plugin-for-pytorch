@@ -97,7 +97,34 @@ def list_files(url):
     return handler.list_files(url)
 
 
-class S3Dataset(Dataset):
+class S3BaseClass(object):
+    """A base class for defining urls_list for S3Dataset and S3IterableDataset
+    """
+    def __init__(self, urls_list):
+        urls = [urls_list] if isinstance(urls_list, str) else urls_list
+        self._urls_list = self.create_urls_list(urls)
+
+    def create_urls_list(self, urls):
+        handler = _pywrap_s3_io.S3Init()
+        urls_list = list()
+        for url in urls:
+            if not handler.file_exists(url):
+                url_objects = handler.list_files(url)
+                assert len(url_objects) != 0, \
+                    f"The directory {url} does not contain any objects."
+                urls_list.extend(url_objects)
+            elif urls_list:
+                urls_list.append(url)
+            else:
+                urls_list = [url]
+        return urls_list
+
+    @property
+    def urls_list(self):
+        return self._urls_list
+
+
+class S3Dataset(S3BaseClass, Dataset):
     """A mapped-style dataset for objects in s3.
     """
     def __init__(self, urls_list):
@@ -108,18 +135,7 @@ class S3Dataset(Dataset):
                 as a filename first. If the file doesn't exist, the string
                 is assumed as a prefix.
         """
-        urls = [urls_list] if isinstance(urls_list, str) else urls_list
-        handler = _pywrap_s3_io.S3Init()
-        self.urls_list = list()
-        for url in urls:
-            if not handler.file_exists(url):
-                url_objects = handler.list_files(url)
-                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
-                self.urls_list.extend(url_objects)
-            elif self.urls_list:
-                self.urls_list.append(url)
-            else:
-                self.urls_list = [url]
+        S3BaseClass.__init__(self, urls_list)
         # Initialize the handler in the worker since we want each worker to have
         # it's own handler
         self.handler = None
@@ -135,25 +151,14 @@ class S3Dataset(Dataset):
         return filename, fileobj
 
 
-class S3IterableDataset(IterableDataset):
+class S3IterableDataset(S3BaseClass, IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
     def __init__(self, urls_list, shuffle_urls=False):
         self.epoch = 0
-        urls = [urls_list] if isinstance(urls_list, str) else urls_list
-        handler = _pywrap_s3_io.S3Init()
         self.shuffle_urls = shuffle_urls
-        self.urls_list = list()
-        for url in urls:
-            if not handler.file_exists(url):
-                url_objects = handler.list_files(url)
-                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
-                self.urls_list.extend(url_objects)
-            elif self.urls_list:
-                self.urls_list.append(url)
-            else:
-                self.urls_list = [url]
+        S3BaseClass.__init__(self, urls_list)
 
     @property
     def shuffled_list(self):
