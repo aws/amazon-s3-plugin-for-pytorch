@@ -1070,7 +1070,8 @@ class ImageNetS3(IterableDataset):
                 yield self.pipeline(pipeline_input)
 
         except StopIteration:
-            raise StopIteration
+            return
+            # raise StopIteration
 
     def __iter__(self):
         self.s3_iter_dataset = S3IterableDataset(self.url_list, shuffle_urls=True)

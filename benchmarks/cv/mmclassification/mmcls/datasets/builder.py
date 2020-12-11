@@ -90,7 +90,7 @@ def build_dataloader(dataset,
     data_loader = DataLoader(
         dataset,
         batch_size=batch_size,
-        sampler=sampler,
+        sampler=None,
         num_workers=num_workers,
         collate_fn=partial(collate, samples_per_gpu=samples_per_gpu),
         pin_memory=False,
