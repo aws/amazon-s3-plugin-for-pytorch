@@ -26,7 +26,7 @@ def main():
 
     metrics_csv_file = args.metrics_csv_file
     df = pd.read_csv(metrics_csv_file)
-    df.describe()
+    print(df.describe())
 
 if __name__ == '__main__':
     main()
