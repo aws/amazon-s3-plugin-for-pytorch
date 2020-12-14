@@ -7,6 +7,7 @@ from collections import defaultdict
 import argparse
 from mmcv import Config
 import sys
+import pandas as pd
 sys.path.append(os.getcwd())
 sys.path.append( '.' )
 sys.path.append(osp.join(os.getcwd(),'../' ) )
@@ -111,6 +112,7 @@ def parse_args():
     parser.add_argument('epoch_num', type=int, help='number of epochs')
     parser.add_argument('--run_herring', type=int, default=0, help='enable herring')
     parser.add_argument('config', default=None, help='train config file path')
+    parser.add_argument('--metrics_csv_file', default=None, help='train config file path')
     args = parser.parse_args()
     return args
 
@@ -120,6 +122,7 @@ def main():
     work_dir = args.work_dir
     json_logs = get_last_log(work_dir)
     model = args.model_name
+    metrics_csv_file = args.metrics_csv_file
     batch_size = None
     if args.run_herring:
         suffix = "-Herring"
@@ -149,7 +152,6 @@ def main():
     Data = []
 
     model = _convert_model_name(model)
-    namespace = model
 
     for metric in full_run_metrics:
         try:
@@ -172,6 +174,15 @@ def main():
             pass
 
     print("Data: ", Data)
+    pandas_d = {}
+    for d in Data:
+        if d['MetricName'] in set(['Time per Epoch','Total Time', 'Throughput']):
+            pandas_d[d['MetricName']]= [d['Value']]
+
+    df = pd.DataFrame.from_dict(pandas_d)
+    df.to_csv(metrics_csv_file,
+              index=False,
+              mode='a+')
 
 if __name__ == '__main__':
     main()
