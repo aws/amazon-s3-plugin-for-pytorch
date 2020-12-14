@@ -14,11 +14,12 @@ do
     do
       for PREFETCH_FACTOR in {2,}
       do
-        for TRIAL in {1,2} do
+        for TRIAL in {1,2}
+        do
           SECONDS=0
           EPOCH_NUM=1
-          WORK_DIR=work_dirs/${LATENCY}_trial_${TRIAL}_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_${BRANCH}_cache_flush
-          METRICS_CSV=work_dirs_csv/${LATENCY}_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_${BRANCH}_cache_flush.csv
+          WORK_DIR=work_dirs/${LATENCY}_trial_${TRIAL}_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_${PTBRANCH}_cache_flush
+          METRICS_CSV=work_dirs_csv/${LATENCY}_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_${PTBRANCH}_cache_flush.csv
           # Clear the cache
           sudo sysctl -w vm.drop_caches=3
 
@@ -36,9 +37,9 @@ do
           echo $TIME > "${WORK_DIR}/timetaken"
 
           python tools/send_metrics.py 8 ${WORK_DIR} resnet50 ${EPOCH_NUM} \
-          mmclassification/configs/imagenet/resnet50_io_latency.py > ${WORK_DIR}/metrics
+          mmclassification/configs/imagenet/resnet50_io_latency.py --metrics_csv_file=$METRICS_CSV> ${WORK_DIR}/metrics
         done
-        python analyze_variability.py $METRICS_CSV > work_dirs_var/${LATENCY}_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_${BRANCH}_cache_flush
+        python tools/analyze_variability.py $METRICS_CSV > work_dirs_var/${LATENCY}_n_worker_${N_WORKER}_prefetch_${PREFETCH_FACTOR}_${PTBRANCH}_cache_flush
 
       done
     done
