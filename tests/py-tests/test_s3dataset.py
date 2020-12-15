@@ -17,18 +17,21 @@ import pytest
 from awsio.python.lib.io.s3.s3dataset import S3Dataset
 import boto3
 
+bucket = "ydaiming-test-data2"
+os.environ['AWS_REGION'] = 'us-west-2'
+
 
 def test_file_path():
     """
     Test S3Dataset for existing and nonexistent path
     """
     # existing path
-    s3_path = 's3://ydaiming-test-data2/test_0/test'
+    s3_path = 's3://' + bucket + '/test_0/test'
     s3_dataset = S3Dataset(s3_path)
     assert s3_dataset
 
     # non-existent path
-    s3_path_none = 's3://ydaiming-test-data2/non_existent_path/test'
+    s3_path_none = 's3://' + bucket + '/non_existent_path/test'
     with pytest.raises(AssertionError) as excinfo:   
         s3_dataset = S3Dataset(s3_path_none)
     assert 'does not contain any objects' in str(excinfo.value)
@@ -38,7 +41,6 @@ def test_urls_list():
     """
     Test whether urls_list input for S3Dataset works properly
     """
-    os.environ['AWS_REGION'] = 'us-west-2'
     # provide url prefix (path within bucket)
     prefix_to_directory = 'test_0/test'
     prefix_to_file = 'test_1.JPEG'
@@ -46,7 +48,7 @@ def test_urls_list():
 
     # set up boto3
     s3 = boto3.resource('s3')
-    bucket_name = 'ydaiming-test-data2'
+    bucket_name = bucket
     test_bucket = s3.Bucket(bucket_name)
 
     # try individual valid urls and collect url_list and all_boto3_files to test url list input
@@ -73,21 +75,19 @@ def test_urls_list():
     assert s3_files == all_boto3_files
 
     # add an non-existent url to list of urls
-    url_to_non_existent = 's3://ydaiming-test-data2/non_existent_directory'
+    url_to_non_existent = 's3://' + bucket + '/non_existent_directory'
     urls_list.append(url_to_non_existent)
     with pytest.raises(AssertionError) as excinfo:   
         s3_dataset = S3Dataset(urls_list)
     assert 'does not contain any objects' in str(excinfo.value)    
-
-    del os.environ['AWS_REGION']
 
 
 def test_multi_download():
     """
     Test whether S3Dataset with multiple downloads in one url works properly
     """
-    s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
-    bucket_name = 'ydaiming-test-data2'
+    s3_dataset_path = 's3://' + bucket + '/test_0/test'
+    bucket_name = bucket
     prefix = 'test_0/test'
 
     if 'S3_DISABLE_MULTI_PART_DOWNLOAD' in os.environ:
@@ -107,13 +107,13 @@ def test_multi_download():
 
 
 def test_disable_multi_download():
-    s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
+    s3_dataset_path = 's3://' + bucket + '/test_0/test'
     os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD'] = "ON"
     dataset = S3Dataset(s3_dataset_path)
     result1 = [item[0] for item in dataset]
 
     # boto3
-    bucket_name = 'ydaiming-test-data2'
+    bucket_name = bucket
     prefix = 'test_0/test'
     s3 = boto3.resource('s3')
     test_bucket = s3.Bucket(bucket_name)

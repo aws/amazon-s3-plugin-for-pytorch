@@ -21,6 +21,8 @@ from torch.utils.data import DataLoader
 from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset, ShuffleDataset
 from awsio.python.lib.io.s3.s3dataset import tardata, zipdata
 
+bucket = "ydaiming-test-data2"
+
 def read_using_boto(bucket, prefix_list):
         s= boto3.client('s3')
         s3_obj_set = set()
@@ -75,7 +77,6 @@ def run_workers(dataset_type, url_list,  batch_size, boto_obj_set):
         print ("All data correctly loaded for " + dataset_type + " for {} workers".format(num_workers))
 
 def test_tarfiles():
-    bucket = "ydaiming-test-data2"
     tarfiles_list = ["integration_tests/imagenet-train-000000.tar"]
 
     print("\nINITIATING: TARFILES READ TEST")
@@ -85,7 +86,6 @@ def test_tarfiles():
     run_workers("S3IterableDataset", url_list, batch_size, boto_obj_set)
 
 def test_files():
-    bucket = "ydaiming-test-data2"
     files_prefix = "integration_tests/files"
     assert files_prefix[-1] != "/", "Enter Prefix without trailing \"/\" else error"
 
@@ -121,7 +121,6 @@ def test_shuffleurls():
         Test passes if the set of samples loaded in both cases is same and the list of 
         samples is diffrent(loading order different - data being shuffled)
     """
-    bucket = "ydaiming-test-data2"
     files_prefix = "integration_tests/files"
     assert files_prefix[-1] != "/", "Enter Prefix without trailing \"/\" else error"
 
@@ -162,7 +161,6 @@ def test_ShuffleDataset():
             
             If either of these conditions fails, then test fails
     """
-    bucket = "ydaiming-test-data2"
     tarfiles_list = ["integration_tests/imagenet-train-000000.tar",
             "integration_tests/imagenet-train-000001.tar"]
     

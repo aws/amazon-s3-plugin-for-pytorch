@@ -19,6 +19,8 @@ from awsio.python.lib.io.s3.s3dataset import S3Dataset, S3IterableDataset
 from awsio.python.lib.io.s3.s3dataset import list_files, file_exists
 import boto3
 
+bucket = "ydaiming-test-data2"
+os.environ['AWS_REGION'] = 'us-west-2'
 
 def get_tar(s3_dataset_path):
     s3 = boto3.client('s3')
@@ -36,7 +38,7 @@ def get_tar(s3_dataset_path):
 
 
 def test_tar_file_s3dataset():
-    s3_dataset_path = 's3://ydaiming-test-data2/tinyimagenet.tar'
+    s3_dataset_path = 's3://' + bucket + '/tinyimagenet.tar'
     dataset = S3Dataset(s3_dataset_path)
     fileobj = io.BytesIO(dataset[0][1])
     import tarfile
@@ -47,7 +49,7 @@ def test_tar_file_s3dataset():
 
 
 def test_tar_file_s3iterabledataset():
-    s3_dataset_path = 's3://ydaiming-test-data2/tinyimagenet.tar'
+    s3_dataset_path = 's3://' + bucket + '/tinyimagenet.tar'
     dataset = S3IterableDataset(s3_dataset_path)
     list_of_files = []
     for files in dataset:
@@ -72,7 +74,7 @@ def get_zip(s3_dataset_path):
 
 
 def test_zip_file_s3dataset():
-    s3_dataset_path = 's3://ydaiming-test-data2/tiny-imagenet-200.zip'
+    s3_dataset_path = 's3://' + bucket + '/tiny-imagenet-200.zip'
     dataset = S3Dataset(s3_dataset_path)
     fileobj = io.BytesIO(dataset[0][1])
     import zipfile
@@ -83,7 +85,7 @@ def test_zip_file_s3dataset():
 
 
 def test_zip_file_s3iterabledataset():
-    s3_dataset_path = 's3://ydaiming-test-data2/tiny-imagenet-200.zip'
+    s3_dataset_path = 's3://' + bucket + '/tiny-imagenet-200.zip'
     dataset = S3IterableDataset(s3_dataset_path)
     list_of_files = []
     for files in dataset:
@@ -94,8 +96,7 @@ def test_zip_file_s3iterabledataset():
 
 
 def test_csv_file_s3dataset():
-    os.environ['AWS_REGION'] = 'us-west-2'
-    s3_dataset_path = 's3://ydaiming-test-data2/genome-scores.csv'
+    s3_dataset_path = 's3://' + bucket + '/genome-scores.csv'
     dataset = S3Dataset(s3_dataset_path)
     import pandas as pd
     result1 = pd.read_csv(io.BytesIO(dataset[0][1]))
@@ -104,12 +105,10 @@ def test_csv_file_s3dataset():
                         Key=s3_dataset_path.split('/')[3])
     result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
     assert result1.equals(result2)
-    del os.environ['AWS_REGION']
 
 
 def test_csv_file_s3iterabledataset():
-    os.environ['AWS_REGION'] = 'us-west-2'
-    s3_dataset_path = 's3://ydaiming-test-data2/genome-scores.csv'
+    s3_dataset_path = 's3://' + bucket + '/genome-scores.csv'
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:
@@ -118,4 +117,3 @@ def test_csv_file_s3iterabledataset():
     obj = s3.get_object(Bucket=s3_dataset_path.split('/')[2], Key=s3_dataset_path.split('/')[3])
     result2 = pd.read_csv(io.BytesIO(obj['Body'].read()))
     assert result1.equals(result2)
-    del os.environ['AWS_REGION']
