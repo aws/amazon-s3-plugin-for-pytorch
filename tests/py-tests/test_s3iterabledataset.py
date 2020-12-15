@@ -108,11 +108,11 @@ def test_shuffle_true():
 
 
 def test_multi_download():
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
+    s3_dataset_path = 's3://ydaiming-test-data2/genome-scores.csv'
 
     if 'S3_DISABLE_MULTI_PART_DOWNLOAD' in os.environ:
         del os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD']
-    os.environ['AWS_REGION'] = 'us-east-1'
+    os.environ['AWS_REGION'] = 'us-west-2'
 
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
@@ -126,9 +126,9 @@ def test_multi_download():
 
 
 def test_disable_multi_download():
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
+    s3_dataset_path = 's3://ydaiming-test-data2/genome-scores.csv'
     os.environ['S3_DISABLE_MULTI_PART_DOWNLOAD'] = "ON"
-    os.environ['AWS_REGION'] = 'us-east-1'
+    os.environ['AWS_REGION'] = 'us-west-2'
     dataset = S3IterableDataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:

@@ -22,9 +22,9 @@ from awsio.python.lib.io.s3.s3dataset import (list_files, file_exists,
 import boto3
 
 def test_regions():
-    os.environ['AWS_REGION'] = 'us-east-1'
-    s3_dataset_path = 's3://roshanin-dev/test/n'
-    bucket_name = 'roshanin-dev'
+    os.environ['AWS_REGION'] = 'us-west-2'
+    s3_dataset_path = 's3://ydaiming-test-data2/test/n'
+    bucket_name = 'ydaiming-test-data2'
     prefix = 'test/n'
     result1 = list_files(s3_dataset_path)
     s3 = boto3.resource('s3')
@@ -39,8 +39,8 @@ def test_regions():
 
 
 def test_csv_file():
-    os.environ['AWS_REGION'] = 'us-east-1'
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
+    os.environ['AWS_REGION'] = 'us-west-2'
+    s3_dataset_path = 's3://ydaiming-test-data2/genome-scores.csv'
     dataset = S3Dataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:
