@@ -2,19 +2,19 @@
 conda activate pytorch;
 
 
-for PTBRANCH in 'master'
+for PTBRANCH in 'mansimane_dev_dq_3'
 do
   cd /home/ubuntu/pytorch;
   git checkout $PTBRANCH;
   cd /home/ubuntu/aws_io/benchmarks/cv/mmclassification;
 
-  for LATENCY in '0ms'
+  for LATENCY in '0ms', '5ms'
   do
     for N_WORKER in {8,}
     do
       for PREFETCH_FACTOR in {2,}
       do
-        for TRIAL in {1,}
+        for TRIAL in {0,}
         do
           SECONDS=0
           EPOCH_NUM=1

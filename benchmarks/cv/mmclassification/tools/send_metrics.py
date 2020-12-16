@@ -182,6 +182,7 @@ def main():
     df = pd.DataFrame.from_dict(pandas_d)
     df.to_csv(metrics_csv_file,
               index=False,
+              header=False,
               mode='a+')
 
 if __name__ == '__main__':

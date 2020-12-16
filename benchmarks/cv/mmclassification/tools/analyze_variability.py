@@ -25,7 +25,7 @@ def main():
     args = parse_args()
 
     metrics_csv_file = args.metrics_csv_file
-    df = pd.read_csv(metrics_csv_file)
+    df = pd.read_csv(metrics_csv_file, names=['Time per Epoch', 'Total Time', 'Throughput'])
     print(df.describe())
 
 if __name__ == '__main__':
