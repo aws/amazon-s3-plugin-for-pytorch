@@ -120,7 +120,7 @@ def main():
     work_dir = args.work_dir
     json_logs = get_last_log(work_dir)
     model = args.model_name
-    batch_size = None
+    batch_size = 64
     if args.run_herring:
         suffix = "-Herring"
     else:
@@ -129,7 +129,6 @@ def main():
         args.config = '../' +  args.config
         cfg = Config.fromfile(args.config)
         batch_size = cfg.get('data')['samples_per_gpu']
-
 
     stats = get_metrics(json_logs, args.num_gpus, args.epoch_num, model, suffix, batch_size)
 
