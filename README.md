@@ -68,6 +68,28 @@ To run the sample, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSIO
 ./aws_io
 ```
 
+### Smoke Test
+To test your setup, run:
+```
+bash tests/smoke_tests/import_awsio.sh
+```
+
+The test will first make sure that the package imports correctly by printing the commit hash related to the build.
+Then, it will prompt the user for a S3 url to a file and return whether or not the file exists.
+
+For example:
+```
+$ bash tests/smoke_tests/import_awsio.sh 
+Testing: import awsio
+0.0.1+b119a6d
+import awsio succeeded
+S3 URL : 's3://ydaiming-test-data2/test_0.JPEG'
+Testing: checking setup by quering whether or not 's3://ydaiming-test-data2/test_0.JPEG' is an existing file
+file_exists: True
+Smoke test was successful.
+```
+
+
 ### Test Coverage
 
 To check python test coverage, install [`coverage.py`](https://coverage.readthedocs.io/en/latest/index.html) as follows:

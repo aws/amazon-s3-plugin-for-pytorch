@@ -18,15 +18,10 @@ import sys
 import platform
 import subprocess
 
+from pathlib import Path
 from setuptools import setup, Extension, find_packages 
 from setuptools.command.build_ext import build_ext
 from distutils.version import LooseVersion
-
-# metadata
-package_name = 'awsio'
-version = open('version.txt', 'r').read().strip()
-required_packages = ["torch>=1.5.1"]
-
 
 class CMakeExtension(Extension):
     def __init__(self, name, sourcedir=''):
@@ -81,15 +76,42 @@ class CMakeBuild(build_ext):
         subprocess.check_call(['cmake', ext.sourcedir] + cmake_args, cwd=self.build_temp, env=env)
         subprocess.check_call(['cmake', '--build', '.'] + build_args, cwd=self.build_temp)
 
+
+def get_sha():
+    try:
+        return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()
+    except Exception:
+        return 'Unknown'
+
+def get_version(sha):
+    version = open('version.txt', 'r').read().strip()
+    if sha != 'Unknown':
+        version += '+' + sha[:7]
+    return version
+
+def write_version_file():
+    sha = get_sha()
+    version = get_version(sha)
+    version_path = os.path.join(Path.cwd(), 'awsio', '_version.py') 
+    with open(version_path, 'w') as f:
+        f.write(f"__version__ = \"{version}\"\n")
+
 if __name__ == "__main__":
-    print(f"Building wheel for {package_name}-{version}")
+    # metadata
+    package_name = 'awsio'
+    required_packages = ["torch>=1.5.1"]
+
+    # define __version__
+    write_version_file()
+    exec(open("awsio/_version.py").read())
+    print(f"Building wheel for {package_name}-{__version__}")
 
     with open('README.md') as f:
         readme = f.read()
 
     setup(
         name=package_name,
-        version=version,
+        version=__version__,
         author='Amazon Web Services',
         author_email='aws-pytorch@amazon.com',
         description='A package for creating PyTorch Datasets using objects in AWS S3 buckets',

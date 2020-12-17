@@ -13,3 +13,4 @@
 #   limitations under the License.
 
 from awsio import python
+from awsio._version import __version__
