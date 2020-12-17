@@ -40,8 +40,7 @@ def get_metrics(json_logs, num_gpus, epoch_num, model, suffix="", batch_size=Non
         assert json_log.endswith('.json')
     log_dicts = load_json_logs(json_logs)
     stats = {}
-
-    memory = statistics.mean(log_dicts[0][epoch_num]['memory']) / 1024.0
+    memory = statistics.mean(log_dicts[0][1]['memory']) / 1024.0
     stats["Memory" + suffix] = {}
     stats["Memory" + suffix]["Unit"] = "Gigabytes"
     stats["Memory" + suffix]["Value"] = memory
@@ -49,32 +48,19 @@ def get_metrics(json_logs, num_gpus, epoch_num, model, suffix="", batch_size=Non
     # TODO: Pass batch size as arguement
     if not batch_size:
         batch_size = 32 # Setting previous default value
-    throughput = 1.0 / (statistics.mean(log_dicts[0][epoch_num]['time']) / (num_gpus * batch_size))
+    throughput = 1.0 / (statistics.mean(log_dicts[0][1]['time']) / (num_gpus * batch_size))
     stats["Throughput" + suffix] = {}
     stats["Throughput" + suffix]["Unit"] = "Count/Second"
     stats["Throughput" + suffix]["Value"] = throughput
 
-    gpu_time_mean =  statistics.mean(log_dicts[0][epoch_num]['time'])
-    gpu_time_sigma = statistics.pstdev(log_dicts[0][epoch_num]['time'])
+    gpu_time_mean =  statistics.mean(log_dicts[0][1]['time'])
+    gpu_time_sigma = statistics.pstdev(log_dicts[0][1]['time'])
 
-    data_time_mean = statistics.mean(log_dicts[0][epoch_num]['data_time'])
-    data_time_sigma = statistics.pstdev(log_dicts[0][epoch_num]['data_time'])
+    data_time_mean = statistics.mean(log_dicts[0][1]['data_time'])
+    data_time_sigma = statistics.pstdev(log_dicts[0][1]['data_time'])
 
     print("GPU run time metrics: Mean ", gpu_time_mean, "Standard Dev. ", gpu_time_sigma)
     print("Data run time metrics: Mean ", data_time_mean, "Standard Dev. ", data_time_sigma)
-
-    if 'top-1' in log_dicts[0][epoch_num]:
-
-        acc1 = log_dicts[0][epoch_num]['top-1'][-1]
-        stats["top-1" + suffix] = {}
-        stats["top-1" + suffix]["Unit"] = "None"
-        stats["top-1" + suffix]["Value"] = acc1
-
-    if 'top-5' in log_dicts[0][epoch_num]:
-        acc5 = log_dicts[0][epoch_num]['top-5'][-1]
-        stats["top-5" + suffix] = {}
-        stats["top-5" + suffix]["Unit"] = "None"
-        stats["top-5" + suffix]["Value"] = acc5
 
     return stats
 
@@ -117,6 +103,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+
     work_dir = args.work_dir
     json_logs = get_last_log(work_dir)
     model = args.model_name
