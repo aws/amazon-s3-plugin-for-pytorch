@@ -21,13 +21,18 @@ def load_json_logs(json_logs):
             for line in log_file:
                 log = json.loads(line.strip())
                 # skip lines without `epoch` field
-                if 'epoch' not in log:
-                    continue
-                epoch = log.pop('epoch')
-                if epoch not in log_dict:
-                    log_dict[epoch] = defaultdict(list)
-                for k, v in log.items():
-                    log_dict[epoch][k].append(v)
+                if 'epoch' in log:
+                    epoch = log.pop('epoch')
+                    if epoch not in log_dict:
+                        log_dict[epoch] = defaultdict(list)
+                    for k, v in log.items():
+                        log_dict[epoch][k].append(v)
+                if 'data_load' and 'model_step' in log:
+                    if 'data_load' and 'model_step' not in log_dict:
+                        log_dict['data_load'] = []
+                        log_dict['model_step'] = []
+                    for k, v in log.items():
+                        log_dict[k].append(v)
     return log_dicts
 
 
@@ -61,6 +66,15 @@ def get_metrics(json_logs, num_gpus, epoch_num, model, suffix="", batch_size=Non
 
     print("GPU run time metrics: Mean ", gpu_time_mean, "Standard Dev. ", gpu_time_sigma)
     print("Data run time metrics: Mean ", data_time_mean, "Standard Dev. ", data_time_sigma)
+
+    print ()
+
+    mu_model_time, sig_model_time = \
+            statistics.mean(log_dicts[0]['model_step']), statistics.pstdev(log_dicts[0]['model_step'])
+    mu_data_load, sig_data_load = \
+            statistics.mean(log_dicts[0]['data_load']), statistics.pstdev(log_dicts[0]['data_load'])
+    print ("Model step time mean: ", mu_model_time, " std dev ", sig_model_time)
+    print ("Data load time mean: ", mu_data_load , " std dev ", sig_data_load)
 
     return stats
 
