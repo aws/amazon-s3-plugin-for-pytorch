@@ -3,6 +3,7 @@ dataset_type = 'ImageNet'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
+    dict(type='LoadImageFromFile'),
     dict(type='RandomResizedCrop', size=224),
     dict(type='RandomFlip', flip_prob=0.5, direction='horizontal'),
     dict(type='Normalize', **img_norm_cfg),
@@ -22,12 +23,12 @@ data = dict(
     workers_per_gpu=8,
     train=dict(
         type=dataset_type,
-        data_prefix='/mnt/fsx2/data/imagenet/train',
+        data_prefix='/mnt/fsx2/data/train',
         pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
-        data_prefix='/mnt/fsx2/data/imagenet/val',
-        ann_file='/mnt/fsx2/data/imagenet/meta/val.txt',
+        data_prefix='/mnt/fsx2/data/val',
+        ann_file='/mnt/fsx2/data/meta/val.txt',
         pipeline=test_pipeline),
     test=dict(
         # replace `data/val` with `data/test` for standard test
