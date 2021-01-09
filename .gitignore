@@ -5,9 +5,11 @@
 *.coverage
 *.egg-info
 *.log
+*.pem
 *.pyc
 
 awsio/_version.py
 build/
 dist/
+integ_test_cfg.py
 
