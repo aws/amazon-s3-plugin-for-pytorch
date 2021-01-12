@@ -108,11 +108,16 @@ class FSXIterableDataset(IterableDataset):
         return chain.from_iterable(map(self.download_data, urls_list))
 
     def worker_dist(self, urls):
+        # import time; time.sleep(10)
         if dist.is_initialized():
+            print ("Is this getting executed????")
             world_size = dist.get_world_size()
             rank = dist.get_rank()
             total_size = len(urls)
             urls = urls[rank:total_size:world_size]
+
+        print ("We'll see ", dist.is_initialized())
+        import sys; sys.exit()
 
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is not None:

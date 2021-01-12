@@ -73,8 +73,8 @@ def build_dataloader(dataset,
     """
     rank, world_size = get_dist_info()
     if dist:
-        sampler = DistributedSampler(
-            dataset, world_size, rank, shuffle=shuffle, round_up=round_up)
+        # sampler = DistributedSampler(
+        #     dataset, world_size, rank, shuffle=shuffle, round_up=round_up)
         shuffle = False
         batch_size = samples_per_gpu
         num_workers = workers_per_gpu

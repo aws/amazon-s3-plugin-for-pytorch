@@ -12,6 +12,8 @@ from .fsxdataset import FSXIterableDataset
 from .pipelines import Compose
 from mmcls.models.losses import accuracy
 
+import torch
+
 @DATASETS.register_module()
 class ImageNetFSX(IterableDataset):
     CLASSES = [
@@ -1043,7 +1045,12 @@ class ImageNetFSX(IterableDataset):
         return self.imagenet_generator()
 
     def __len__(self):
-        return 1281167
+
+        dist = torch.distributed
+        world_size = 1
+        if dist.is_initialized():
+            world_size = dist.get_world_size()
+        return 1281167 // world_size
     
     def make_pipeline_ready(self, label, image_name, img_bytes, to_float32=False, color_type='color'):
         # print ("Making pipeline ready")
