@@ -21,13 +21,18 @@ def load_json_logs(json_logs):
             for line in log_file:
                 log = json.loads(line.strip())
                 # skip lines without `epoch` field
-                if 'epoch' not in log:
-                    continue
-                epoch = log.pop('epoch')
-                if epoch not in log_dict:
-                    log_dict[epoch] = defaultdict(list)
-                for k, v in log.items():
-                    log_dict[epoch][k].append(v)
+                if 'epoch' in log:
+                    epoch = log.pop('epoch')
+                    if epoch not in log_dict:
+                        log_dict[epoch] = defaultdict(list)
+                    for k, v in log.items():
+                        log_dict[epoch][k].append(v)
+                if 'data_load' and 'model_step' in log:
+                    if 'data_load' and 'model_step' not in log_dict:
+                        log_dict['data_load'] = []
+                        log_dict['model_step'] = []
+                    for k, v in log.items():
+                        log_dict[k].append(v)
     return log_dicts
 
 
@@ -40,8 +45,7 @@ def get_metrics(json_logs, num_gpus, epoch_num, model, suffix="", batch_size=Non
         assert json_log.endswith('.json')
     log_dicts = load_json_logs(json_logs)
     stats = {}
-
-    memory = statistics.mean(log_dicts[0][epoch_num]['memory']) / 1024.0
+    memory = statistics.mean(log_dicts[0][1]['memory']) / 1024.0
     stats["Memory" + suffix] = {}
     stats["Memory" + suffix]["Unit"] = "Gigabytes"
     stats["Memory" + suffix]["Value"] = memory
@@ -49,32 +53,28 @@ def get_metrics(json_logs, num_gpus, epoch_num, model, suffix="", batch_size=Non
     # TODO: Pass batch size as arguement
     if not batch_size:
         batch_size = 32 # Setting previous default value
-    throughput = 1.0 / (statistics.mean(log_dicts[0][epoch_num]['time']) / (num_gpus * batch_size))
+    throughput = 1.0 / (statistics.mean(log_dicts[0][1]['time']) / (num_gpus * batch_size))
     stats["Throughput" + suffix] = {}
     stats["Throughput" + suffix]["Unit"] = "Count/Second"
     stats["Throughput" + suffix]["Value"] = throughput
 
-    gpu_time_mean =  statistics.mean(log_dicts[0][epoch_num]['time'])
-    gpu_time_sigma = statistics.pstdev(log_dicts[0][epoch_num]['time'])
+    gpu_time_mean =  statistics.mean(log_dicts[0][1]['time'])
+    gpu_time_sigma = statistics.pstdev(log_dicts[0][1]['time'])
 
-    data_time_mean = statistics.mean(log_dicts[0][epoch_num]['data_time'])
-    data_time_sigma = statistics.pstdev(log_dicts[0][epoch_num]['data_time'])
+    data_time_mean = statistics.mean(log_dicts[0][1]['data_time'])
+    data_time_sigma = statistics.pstdev(log_dicts[0][1]['data_time'])
 
     print("GPU run time metrics: Mean ", gpu_time_mean, "Standard Dev. ", gpu_time_sigma)
     print("Data run time metrics: Mean ", data_time_mean, "Standard Dev. ", data_time_sigma)
 
-    if 'top-1' in log_dicts[0][epoch_num]:
+    print ()
 
-        acc1 = log_dicts[0][epoch_num]['top-1'][-1]
-        stats["top-1" + suffix] = {}
-        stats["top-1" + suffix]["Unit"] = "None"
-        stats["top-1" + suffix]["Value"] = acc1
-
-    if 'top-5' in log_dicts[0][epoch_num]:
-        acc5 = log_dicts[0][epoch_num]['top-5'][-1]
-        stats["top-5" + suffix] = {}
-        stats["top-5" + suffix]["Unit"] = "None"
-        stats["top-5" + suffix]["Value"] = acc5
+    mu_model_time, sig_model_time = \
+            statistics.mean(log_dicts[0]['model_step']), statistics.pstdev(log_dicts[0]['model_step'])
+    mu_data_load, sig_data_load = \
+            statistics.mean(log_dicts[0]['data_load']), statistics.pstdev(log_dicts[0]['data_load'])
+    print ("Model step time mean: ", mu_model_time, " std dev ", sig_model_time)
+    print ("Data load time mean: ", mu_data_load , " std dev ", sig_data_load)
 
     return stats
 
@@ -117,10 +117,12 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+
     work_dir = args.work_dir
     json_logs = get_last_log(work_dir)
     model = args.model_name
-    batch_size = None
+    batch_size = 64
     if args.run_herring:
         suffix = "-Herring"
     else:
@@ -129,7 +131,6 @@ def main():
         args.config = '../' +  args.config
         cfg = Config.fromfile(args.config)
         batch_size = cfg.get('data')['samples_per_gpu']
-
 
     stats = get_metrics(json_logs, args.num_gpus, args.epoch_num, model, suffix, batch_size)
 
