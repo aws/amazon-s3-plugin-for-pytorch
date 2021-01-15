@@ -12,5 +12,5 @@ lr_config = dict(
 # runner = dict(type='EpochBasedRunner', max_epochs=5)
 # runner = dict(type='IterBasedRunner', max_iters=12500)
 
-max_iters = 12500
+total_epochs = 5
 
