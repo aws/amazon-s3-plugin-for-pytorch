@@ -19,6 +19,7 @@ Building and installing whole package takes few hours to build so just added S3 
 
 ```
 cmake . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
+make
 make install
 ```
 
