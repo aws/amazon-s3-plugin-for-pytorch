@@ -158,6 +158,10 @@ class S3IterableDataset(S3BaseClass, IterableDataset):
     def __init__(self, urls_list, shuffle_urls=False):
         self.epoch = 0
         self.shuffle_urls = shuffle_urls
+        self.dist = dist.is_initialized() if dist.is_available() else False
+        if self.dist:
+            self.world_size = dist.get_world_size()
+            self.rank = dist.get_rank()
         S3BaseClass.__init__(self, urls_list)
 
     @property
@@ -184,11 +188,9 @@ class S3IterableDataset(S3BaseClass, IterableDataset):
         return chain.from_iterable(map(self.download_data, urls_list))
 
     def worker_dist(self, urls):
-        if dist.is_initialized():
-            world_size = dist.get_world_size()
-            rank = dist.get_rank()
+        if self.dist:
             total_size = len(urls)
-            urls = urls[rank:total_size:world_size]
+            urls = urls[self.rank:total_size:self.world_size]
 
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is not None:
