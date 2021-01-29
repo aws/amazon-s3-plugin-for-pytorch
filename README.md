@@ -8,7 +8,7 @@ The users have the flexibility to use either map-style or iterable-style dataset
 
 You can install this package by following the below instructions.
 
-####Prerequisite
+#### Prerequisite
 
 - Python 3.6 (or Python 3.7) is required for this installation. Instructions are written for Python 3.6 but are almost identical for Python 3.7 (changes needed: 1. Python version when creating Conda environment; 2. Python version references in the URL to the wheel). We recommend that you create a Conda environment:
 
@@ -29,7 +29,7 @@ make install
 
 - Pytorch >= 1.5
 
-####Installing via Wheel
+#### Installing via Wheel
 
 ```shell script
 # TODO Add final public wheels
@@ -37,7 +37,7 @@ aws s3 cp <S3 URI> .
 pip install <whl name awsio-0.0.1-cp...whl>
 ```
 
-###Configuration
+### Configuration
 
 Before reading data from S3 bucket, you need to provide bucket region parameter:
 
@@ -70,7 +70,7 @@ file_exists: True
 Smoke test was successful.
 ```
 
-###Usage
+### Usage
 
 Once the above setup is complete, you can interact with S3 bucket in following ways:
 Accepted input S3 url formats:
@@ -93,7 +93,7 @@ from awsio.python.lib.io.s3.s3dataset import list_files
 urls = list_files('s3://path/to/s3_prefix/0')
 ```
 
-####Map-Style Dataset
+#### Map-Style Dataset
 
 If each object in S3 contains a single training sample, then map-style dataset i.e. S3Dataset can be used. To partition data across nodes and to shuffle data, this dataset can be used with PyTorch distributed sampler. Additionally, pre-processing can be applied to the data in S3 by extending the S3Dataset class. Following example illustrates use of map-style S3Dataset for image datasets: 
 
@@ -229,7 +229,7 @@ Note that the above code will only shuffle sequence of shards, the individual tr
 dataset = ShuffleDataset(ImageS3(urls), buffer_size=4000)
 ```
 
-####Iterable-style dataset (NLP)
+#### Iterable-style dataset (NLP)
 The data set can be similarly used for NLP tasks. Following example demonstrates use for S3IterableDataset for BERT data loading. 
 
 ```shell script
