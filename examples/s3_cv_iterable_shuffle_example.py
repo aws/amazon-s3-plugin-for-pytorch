@@ -47,7 +47,7 @@ preproc = transforms.Compose([
     transforms.Resize((100, 100))
 ])
 
-dataset = ImageNetS3(url_list, transform=preproc)
+dataset = ImageNetS3(url_list, transform=preproc, shuffle=True)
 
 dataloader = DataLoader(dataset, num_workers=4, batch_size=32)
 

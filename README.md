@@ -41,11 +41,11 @@ pip install <whl name awsio-0.0.1-cp...whl>
 
 Before reading data from S3 bucket, you need to provide bucket region parameter:
 
-* `AWS_REGION`: By default, regional endpoint is used for S3, with region controlled by `AWS_REGION`. If `AWS_REGION` is not specified, then `us-west-2` is used by defaule.
+* `AWS_REGION`: By default, regional endpoint is used for S3, with region controlled by `AWS_REGION`. If `AWS_REGION` is not specified, then `us-west-2` is used by default.
 
 To read objects in a bucket that is not publicly accessible, AWS credentials must be provided through one of the following methods:
 
-* Install and configure [awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html). 
+* Install and configure [awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) by `aws configure`. 
 * Set credentials in the AWS credentials profile file on the local system, located at: `~/.aws/credentials` on Linux, macOS, or Unix
 * Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
 * If you are using this library on an EC2 instance, specify an IAM role and then give the EC2 instance access to that role.
@@ -65,8 +65,8 @@ $ bash tests/smoke_tests/import_awsio.sh
 Testing: import awsio
 0.0.1+b119a6d
 import awsio succeeded
-S3 URL : 's3://ydaiming-test-data2/test_0.JPEG'
-Testing: checking setup by quering whether or not 's3://ydaiming-test-data2/test_0.JPEG' is an existing file
+S3 URL : 's3://path/to/bucket/test_0.JPEG'
+Testing: checking setup by quering whether or not 's3://path/to/bucket/test_0.JPEG' is an existing file
 file_exists: True
 Smoke test was successful.
 ```
@@ -74,6 +74,7 @@ Smoke test was successful.
 ### Usage
 
 Once the above setup is complete, you can interact with S3 bucket in following ways:
+
 Accepted input S3 url formats:
 
 * Single url 
