@@ -123,7 +123,6 @@ different workers and nodes if distributed training is enabled.
 - AWS-SDK-CPP (core and S3) See below for instructions
 - cmake (>v3.2)
 - python development libraries(including pybind 11) (conda install pybind11)
-- Abseil - https://abseil.io/docs/cpp/quickstart-cmake.html
 
 
 ### Adding AWS-SDK-CPP as a dependency
@@ -137,7 +136,8 @@ https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/setup.html
 Building and installing whole package takes few hours to build so just added S3 plugin which we need for this project.
 
 ```
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
+cmake . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
+make
 make install
 ```
 
@@ -187,10 +187,52 @@ To run the sample, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSIO
 ./aws_io
 ```
 
-## To Do
-1. List all file format supported 
-2. Can we have public s3 buckets so that the example s3 link will work for all customers?
-3. Shuffle dataset.
-4. We can not release imagenet example
-
  
+### Smoke Test
+To test your setup, run:
+```
+bash tests/smoke_tests/import_awsio.sh
+```
+
+The test will first make sure that the package imports correctly by printing the commit hash related to the build.
+Then, it will prompt the user for a S3 url to a file and return whether or not the file exists.
+
+For example:
+```
+$ bash tests/smoke_tests/import_awsio.sh 
+Testing: import awsio
+0.0.1+b119a6d
+import awsio succeeded
+S3 URL : 's3://ydaiming-test-data2/test_0.JPEG'
+Testing: checking setup by quering whether or not 's3://ydaiming-test-data2/test_0.JPEG' is an existing file
+file_exists: True
+Smoke test was successful.
+```
+
+
+### Test Coverage
+
+To check python test coverage, install [`coverage.py`](https://coverage.readthedocs.io/en/latest/index.html) as follows:
+
+```
+pip install coverage
+```
+
+To make sure that all tests are run, please also install `pytest`, `boto3`, and `pandas` as follows:
+```
+pip install pytest boto3 pandas
+``` 
+
+To run tests and calculate coverage:
+
+```asm
+coverage erase
+coverage run -p --source=awsio -m pytest -v tests/py-tests/test_regions.py \
+tests/py-tests/test_utils.py \
+tests/py-tests/test_s3dataset.py \
+tests/py-tests/test_s3iterabledataset.py \
+tests/py-tests/test_read_datasets.py \
+tests/py-tests/test_integration.py
+coverage combine
+coverage report -m
+```

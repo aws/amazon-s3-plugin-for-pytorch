@@ -1,3 +1,17 @@
+#   Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+  
+#   Licensed under the Apache License, Version 2.0 (the "License").
+#   You may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+  
+#       http://www.apache.org/licenses/LICENSE-2.0
+  
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+
 import tarfile
 import io
 import zipfile
@@ -83,7 +97,34 @@ def list_files(url):
     return handler.list_files(url)
 
 
-class S3Dataset(Dataset):
+class S3BaseClass(object):
+    """A base class for defining urls_list for S3Dataset and S3IterableDataset
+    """
+    def __init__(self, urls_list):
+        urls = [urls_list] if isinstance(urls_list, str) else urls_list
+        self._urls_list = self.create_urls_list(urls)
+
+    def create_urls_list(self, urls):
+        handler = _pywrap_s3_io.S3Init()
+        urls_list = list()
+        for url in urls:
+            if not handler.file_exists(url):
+                url_objects = handler.list_files(url)
+                assert len(url_objects) != 0, \
+                    f"The directory {url} does not contain any objects."
+                urls_list.extend(url_objects)
+            elif urls_list:
+                urls_list.append(url)
+            else:
+                urls_list = [url]
+        return urls_list
+
+    @property
+    def urls_list(self):
+        return self._urls_list
+
+
+class S3Dataset(S3BaseClass, Dataset):
     """A mapped-style dataset for objects in s3.
     """
     def __init__(self, urls_list):
@@ -94,47 +135,34 @@ class S3Dataset(Dataset):
                 as a filename first. If the file doesn't exist, the string
                 is assumed as a prefix.
         """
-        urls = [urls_list] if isinstance(urls_list, str) else urls_list
-        self.handler = _pywrap_s3_io.S3Init()
-        self.urls_list = list()
-        for url in urls:
-            if not file_exists(url):
-                url_objects = self.handler.list_files(url)
-                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
-                self.urls_list.extend(url_objects)
-            elif self.urls_list:
-                self.urls_list.append(url)
-            else:
-                self.urls_list = [url]
+        S3BaseClass.__init__(self, urls_list)
+        # Initialize the handler in the worker since we want each worker to have
+        # it's own handler
+        self.handler = None
 
     def __len__(self):
         return len(self.urls_list)
 
     def __getitem__(self, idx):
+        if self.handler == None:
+            self.handler = _pywrap_s3_io.S3Init()
         filename = self.urls_list[idx]
         fileobj = self.handler.s3_read(filename)
         return filename, fileobj
 
 
-class S3IterableDataset(IterableDataset):
+class S3IterableDataset(S3BaseClass, IterableDataset):
     """Iterate over s3 dataset.
     It handles some bookkeeping related to DataLoader.
     """
     def __init__(self, urls_list, shuffle_urls=False):
         self.epoch = 0
-        urls = [urls_list] if isinstance(urls_list, str) else urls_list
-        self.handler = _pywrap_s3_io.S3Init()
         self.shuffle_urls = shuffle_urls
-        self.urls_list = list()
-        for url in urls:
-            if not file_exists(url):
-                url_objects = self.handler.list_files(url)
-                assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
-                self.urls_list.extend(url_objects)
-            elif self.urls_list:
-                self.urls_list.append(url)
-            else:
-                self.urls_list = [url]
+        self.dist = dist.is_initialized() if dist.is_available() else False
+        if self.dist:
+            self.world_size = dist.get_world_size()
+            self.rank = dist.get_rank()
+        S3BaseClass.__init__(self, urls_list)
 
     @property
     def shuffled_list(self):
@@ -160,11 +188,9 @@ class S3IterableDataset(IterableDataset):
         return chain.from_iterable(map(self.download_data, urls_list))
 
     def worker_dist(self, urls):
-        if dist.is_initialized():
-            world_size = dist.get_world_size()
-            rank = dist.get_rank()
+        if self.dist:
             total_size = len(urls)
-            urls = urls[rank:total_size:world_size]
+            urls = urls[self.rank:total_size:self.world_size]
 
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is not None:
@@ -176,6 +202,7 @@ class S3IterableDataset(IterableDataset):
             return urls
 
     def __iter__(self):
+        self.handler = _pywrap_s3_io.S3Init()
         urls = self.worker_dist(self.shuffled_list)
         return self.get_stream(urls)
 
@@ -204,127 +231,16 @@ class ShuffleDataset(torch.utils.data.IterableDataset):
         try:
             while True:
                 try:
+                    if self.buffer_size == 0:
+                        break
                     evict_idx = random.randint(0, self.buffer_size - 1)
                     yield shufbuf.pop(evict_idx)
                     item = next(dataset_iter)
                     shufbuf.append(item)
                 except StopIteration:
                     break
+            while len(shufbuf) > 0:
+                evict_idx = random.randint(0, len(shufbuf) - 1)
+                yield shufbuf.pop(evict_idx)
         except GeneratorExit: # pragma: no cover
             pass
-
-import boto3
-from boto3.s3.transfer import TransferConfig
-
-class S3BotoSet(Dataset): # pragma: no cover
-    """A mapped-style dataset for objects in s3.
-    """
-    def __init__(self, bucket_name, prefix):
-        url = 's3://' + bucket_name + '/' + prefix
-        self.handler = _pywrap_s3_io.S3Init()
-        self.urls_list = list()
-        url_objects = self.handler.list_files(url)
-        assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
-        self.urls_list.extend(url_objects)
-
-        MB = 1024**2
-        self.config = TransferConfig(max_concurrency=10,
-                        multipart_threshold = 20 * MB)
-        self.bucket_name = bucket_name
-        self.prefix = prefix
-
-    def __len__(self):
-        return len(self.urls_list)
-
-    def __getitem__(self, idx):
-        filename = self.urls_list[idx]
-        print('downloading...')
-        filename = filename.replace('s3://' + self.bucket_name + '/', '')
-        fs = io.BytesIO()
-        s= boto3.client('s3')
-        s.download_fileobj(self.bucket_name,
-                                filename,
-                                fs,
-                                Config=self.config)
-
-        return self.urls_list[idx], fs.getvalue()
-
-class S3BotoIterableDataset(IterableDataset): # pragma: no cover
-    """Iterate over s3 dataset.
-    It handles some bookkeeping related to DataLoader.
-    """
-    def __init__(self, bucket_name, prefix, shuffle_urls=False):
-        url = 's3://' + bucket_name + '/' + prefix
-        self.handler = _pywrap_s3_io.S3Init()
-        self.urls_list = list()
-        url_objects = self.handler.list_files(url)
-        assert len(url_objects) != 0, f"The directory {url} does not contain any objects. Please make sure it is a valid path."
-        self.urls_list.extend(url_objects)
-        self.epoch = 0
-        self.shuffle_urls = shuffle_urls
-
-        MB = 1024**2
-        self.config = TransferConfig(max_concurrency=10,
-                        multipart_threshold = 20 * MB)
-        self.bucket_name = bucket_name
-        self.prefix = prefix
-
-    @property
-    def shuffled_list(self):
-        if self.shuffle_urls:
-            random.seed(self.epoch)
-            return random.sample(self.urls_list, len(self.urls_list))
-        else:
-            return self.urls_list
-
-    def download_data(self, filename):
-        print('downloading...')
-        filename = filename.replace('s3://' + self.bucket_name + '/', '')
-        fs = io.BytesIO()
-        s= boto3.client('s3')
-        s.download_fileobj(self.bucket_name,
-                                filename,
-                                fs,
-                                Config=self.config)
-
-        file_content = fs.getvalue()
-        if filename[-3:] == "tar":
-            tarfile = tardata(file_content)
-            for fname, content in tarfile:
-                yield fname, content
-        elif filename[-3:] == "zip":
-            zipfile = zipdata(file_content)
-            for fname, content in zipfile:
-                yield fname, content
-        else:
-            yield filename, file_content
-
-    def get_stream(self, urls_list):
-        return chain.from_iterable(map(self.download_data, urls_list))
-
-    def worker_dist(self, urls):
-        if dist.is_initialized() :
-            world_size = dist.get_world_size()
-            rank = dist.get_rank()
-            total_size = len(urls)
-            urls = urls[rank:total_size:world_size]
-
-        worker_info = torch.utils.data.get_worker_info()
-        if worker_info is not None:
-            wid = worker_info.id
-            num_workers = worker_info.num_workers
-            length = len(urls)
-            return urls[wid:length:num_workers]
-        else:
-            return urls
-
-    def __iter__(self):
-        urls = self.worker_dist(self.shuffled_list)
-        return self.get_stream(urls)
-
-    def __len__(self):
-        return len(self.urls_list)
-
-
-    def set_epoch(self, epoch):
-        self.epoch = epoch
