@@ -1,9 +1,7 @@
-from torch.utils.data import IterableDataset
+from torch.utils.data import IterableDataset, DataLoader
 from awsio.python.lib.io.s3.s3dataset import S3IterableDataset
-from itertools import islice
 from PIL import Image
 import io
-import numpy as np
 from torchvision import transforms
 
 
@@ -40,15 +38,18 @@ class ImageNetS3(IterableDataset):
         return self.data_generator()
 
 
-url_list = ["s3://ydaiming-test-data2/integration_tests/imagenet-train-000000.tar"]
+url_list = ["s3://image-data-bucket/imagenet-train-000000.tar"]
 # Torchvision transforms to apply on data
 
 preproc = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    transforms.Resize((100, 100))
 ])
 
 dataset = ImageNetS3(url_list, transform=preproc)
-for e in range(5):
 
+dataloader = DataLoader(dataset, num_workers=4, batch_size=32)
+
+for e in range(5):
     dataset.set_epoch(e)

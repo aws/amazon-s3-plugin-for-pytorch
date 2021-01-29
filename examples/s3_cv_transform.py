@@ -1,11 +1,12 @@
-
+from torch.utils.data import DataLoader
 from awsio.python.lib.io.s3.s3dataset import S3Dataset
 from torchvision import transforms
 from PIL import Image
 import io
-url_list = ['s3://mansmane-dev/imagenet/train/n01440764/n01440764_10026.JPEG',
- 's3://mansmane-dev/imagenet/train/n01440764/n01440764_10027.JPEG',
- 's3://mansmane-dev/imagenet/train/n01440764/n01440764_10029.JPEG']
+
+url_list = ['s3://image-data-bucket/train/n01440764/n01440764_10026.JPEG',
+ 's3://image-data-bucket/train/n01440764/n01440764_10027.JPEG',
+ 's3://image-data-bucket/train/n01440764/n01440764_10029.JPEG']
 
 class S3ImageSet(S3Dataset):
     def __init__(self, url, transform=None):
@@ -21,10 +22,14 @@ class S3ImageSet(S3Dataset):
 
 preproc = transforms.Compose([
     transforms.ToTensor(),
-    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
+    transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+    transforms.Resize((100, 100))
 ])
 dataset = S3ImageSet(url_list,transform=preproc)
 
+dataloader = DataLoader(dataset,
+        batch_size=2,
+        num_workers=64)
+
 for i in range(len(dataset)):
     print(dataset[i])
-

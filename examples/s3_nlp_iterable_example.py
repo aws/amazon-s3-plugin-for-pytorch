@@ -31,6 +31,7 @@ class s3_dataset(IterableDataset):
     """
     def __init__(self, s3_directory):
         self.s3_directory = s3_directory
+        self.dataset = S3IterableDataset(self.s3_directory, shuffle_urls=True)
 
     def data_generator(self):
         try:
@@ -46,13 +47,11 @@ class s3_dataset(IterableDataset):
             raise e
 
     def __iter__(self):
-        self.dataset = S3IterableDataset(self.s3_directory, shuffle_urls=True)
         self.dataset_iter = iter(self.dataset)
         return self.data_generator()
 
 
-
-s3_directory = "s3://choidong-bert/phase1/training/wiki_books_corpus_training"
+s3_directory = "s3://bert-data-bucket/training/wiki_books_corpus_training"
 train_dataset = s3_dataset(s3_directory=s3_directory)
 for sample in islice(train_dataset, 0, 1):
     print(sample)
