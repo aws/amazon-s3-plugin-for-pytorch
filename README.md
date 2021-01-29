@@ -45,6 +45,7 @@ Before reading data from S3 bucket, you need to provide bucket region parameter:
 
 To read objects in a bucket that is not publicly accessible, AWS credentials must be provided through one of the following methods:
 
+* Install and configure [awscli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html). 
 * Set credentials in the AWS credentials profile file on the local system, located at: `~/.aws/credentials` on Linux, macOS, or Unix
 * Set the `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` environment variables.
 * If you are using this library on an EC2 instance, specify an IAM role and then give the EC2 instance access to that role.
