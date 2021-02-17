@@ -10,26 +10,16 @@ You can install this package by following the below instructions.
 
 #### Prerequisite
 
-- Python 3.6 (or Python 3.7) is required for this installation. Instructions are written for Python 3.6 but are almost identical for Python 3.7 (changes needed: 1. Python version when creating Conda environment; 2. Python version references in the URL to the wheel). We recommend that you create a Conda environment:
+- Python 3.6 (or Python 3.7) is required for this installation.
 
-```shell
-conda create --name py36 python=3.6
-conda activate py36
-```
+- [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html) for configuring S3 access.
 
-- Install AWS-SDK-CPP (https://docs.aws.amazon.com/sdk-for-cpp/v1/developer-guide/setup.html). Make sure to select the build type as ‘Release’ and BUILD_ONLY param as ‘s3;transfer’ as we only need s3 and transfer components:
+- Pytorch >= 1.5 (If not available, S3-plugin installs latest Torch)
 
-```shell
-git clone https://github.com/aws/aws-sdk-cpp.git
-cd aws-sdk-cpp
-cmake . -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=$HOME/bin/aws-sdk -D BUILD_ONLY="s3;transfer"
-make
-make install
-```
+- *Note:* To run on Mac, [AWS_SDK_CPP](https://github.com/aws/aws-sdk-cpp) must be installed.
 
-- Pytorch >= 1.5
 
-#### Installing via Wheel
+#### Installing S3-Plugin via Wheel
 
 ```shell script
 # TODO Add final public wheels
