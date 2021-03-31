@@ -35,12 +35,12 @@ def test_wrong_filenames():
 
 def test_list_files_prefix():
     # default region is us-west-2
-    s3_dataset_path = 's3://ydaiming-test-data2/test_0/test'
+    s3_dataset_path = 's3://pt-s3plugin-test-data-west2/images/test'
     result1 = list_files(s3_dataset_path)
     s3 = boto3.resource('s3')
-    test_bucket = s3.Bucket('ydaiming-test-data2')
+    test_bucket = s3.Bucket('pt-s3plugin-test-data-west2')
     result2 = []
-    for url in test_bucket.objects.filter(Prefix='test_0/test'):
+    for url in test_bucket.objects.filter(Prefix='images/test'):
         result2.append('s3://' + url.bucket_name + '/' + url.key)
     assert isinstance(result1, list)
     assert isinstance(result2, list)
@@ -51,10 +51,10 @@ def test_list_files_prefix():
 def test_list_files_bucket():
     os.environ['AWS_REGION'] = 'us-west-2'
     # default region is us-west-2
-    s3_dataset_path = 's3://ydaiming-test-data2'
+    s3_dataset_path = 's3://pt-s3plugin-test-data-west2'
     result1 = list_files(s3_dataset_path)
     s3 = boto3.resource('s3')
-    test_bucket = s3.Bucket('ydaiming-test-data2')
+    test_bucket = s3.Bucket('pt-s3plugin-test-data-west2')
     result2 = []
     for url in test_bucket.objects.all():
         if url.key[-1] == '/':
@@ -74,7 +74,7 @@ def test_file_exists():
     3. bucket_name does not refer to an existing bucket (False)
     4. object_name does not refer to an existing object (False)
     """
-    s3_bucket = 's3://ydaiming-test-data2'
+    s3_bucket = 's3://pt-s3plugin-test-data-west2'
 
     # case 1
     assert file_exists(os.path.join(s3_bucket, 'test_0.JPEG'))
@@ -90,7 +90,7 @@ def test_file_exists():
 
 
 def test_get_file_size():
-    bucket_name = 'ydaiming-test-data2'
+    bucket_name = 'pt-s3plugin-test-data-west2'
     object_name = 'test_0.JPEG'
 
     result1 = get_file_size('s3://' + bucket_name + '/' + object_name)

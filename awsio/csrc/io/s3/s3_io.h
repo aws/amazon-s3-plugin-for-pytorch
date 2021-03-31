@@ -24,9 +24,6 @@
 
 namespace awsio {
 // In memory stream implementation
-// AWS Streams destroy the buffer (buf) passed, so creating a new
-// IOStream that retains the buffer so the calling function
-// can control it's lifecycle
 class S3UnderlyingStream : public Aws::IOStream {
    public:
     using Base = Aws::IOStream;

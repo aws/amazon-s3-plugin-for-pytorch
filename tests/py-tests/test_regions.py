@@ -23,9 +23,9 @@ import boto3
 
 def test_regions():
     os.environ['AWS_REGION'] = 'us-east-1'
-    s3_dataset_path = 's3://roshanin-dev/test/n'
-    bucket_name = 'roshanin-dev'
-    prefix = 'test/n'
+    s3_dataset_path = 's3://pt-s3plugin-test-data-east1/images/n'
+    bucket_name = 'pt-s3plugin-test-data-east1'
+    prefix = 'images/n'
     result1 = list_files(s3_dataset_path)
     s3 = boto3.resource('s3')
     test_bucket = s3.Bucket(bucket_name)
@@ -40,7 +40,7 @@ def test_regions():
 
 def test_csv_file():
     os.environ['AWS_REGION'] = 'us-east-1'
-    s3_dataset_path = 's3://roshanin-dev/genome-scores.csv'
+    s3_dataset_path = 's3://pt-s3plugin-test-data-east1/genome-scores.csv'
     dataset = S3Dataset(s3_dataset_path)
     import pandas as pd
     for files in dataset:

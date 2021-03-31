@@ -197,9 +197,8 @@ class S3FS {
                 Aws::New<Aws::Utils::Stream::PreallocatedStreamBuf>(
                     "S3ReadStream", reinterpret_cast<unsigned char *>(buffer),
                     n));
-        };
+        }; // This buffer is what we used to initialize streambuf and is in memory
 
-        // This buffer is what we used to initialize streambuf and is in memory
         std::shared_ptr<Aws::Transfer::TransferHandle> downloadHandle =
             this->transfer_manager_.get()->DownloadFile(
                 this->bucket_name_.c_str(), this->object_name_.c_str(), offset,
