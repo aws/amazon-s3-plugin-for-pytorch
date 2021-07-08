@@ -1,2 +1,2 @@
-awsio
+amazon-s3-plugin-for-pytorch
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved. 
