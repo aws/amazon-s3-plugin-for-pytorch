@@ -38,7 +38,7 @@ class ImageNetS3(IterableDataset):
         return self.data_generator()
 
 
-url_list = ["s3://image-data-bucket/imagenet-train-000000.tar"]
+url_list = ["s3://pt-s3plugin-test-data-west2/integration_tests/imagenet-train-000000.tar"]
 # Torchvision transforms to apply on data
 
 preproc = transforms.Compose([
@@ -47,7 +47,7 @@ preproc = transforms.Compose([
     transforms.Resize((100, 100))
 ])
 
-dataset = ImageNetS3(url_list, transform=preproc, shuffle=True)
+dataset = ImageNetS3(url_list, transform=preproc, shuffle_urls=True)
 
 dataloader = DataLoader(dataset, num_workers=4, batch_size=32)
 
