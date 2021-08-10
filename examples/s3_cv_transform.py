@@ -4,9 +4,9 @@ from torchvision import transforms
 from PIL import Image
 import io
 
-url_list = ['s3://image-data-bucket/train/n01440764/n01440764_10026.JPEG',
- 's3://image-data-bucket/train/n01440764/n01440764_10027.JPEG',
- 's3://image-data-bucket/train/n01440764/n01440764_10029.JPEG']
+url_list = ['s3://pt-s3plugin-test-data-west2/images/test_9970.JPEG',
+ 's3://pt-s3plugin-test-data-west2/images/test_9971.JPEG',
+ 's3://pt-s3plugin-test-data-west2/images/test_9972.JPEG']
 
 class S3ImageSet(S3Dataset):
     def __init__(self, url, transform=None):
