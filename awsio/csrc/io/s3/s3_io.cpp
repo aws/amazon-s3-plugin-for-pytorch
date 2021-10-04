@@ -85,6 +85,11 @@ Aws::Client::ClientConfiguration &setUpS3Config() {
     } else {
         cfg.region = "us-west-2";
     }
+
+    const char *endpoint_url = getenv("S3_ENDPOINT_URL");
+    if (endpoint_url) {
+        cfg.endpointOverride = endpoint_url;
+    }
     return cfg;
 }
 
