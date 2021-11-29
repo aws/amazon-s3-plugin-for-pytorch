@@ -91,12 +91,12 @@ Aws::Client::ClientConfiguration &setUpS3Config() {
         cfg.endpointOverride = endpoint_url;
     }
 
-    const char *proxy_host = getenv("PROXY_HOST");
+    const char *proxy_host = getenv("S3_PROXY_HOST");
     if (proxy_host) {
         cfg.proxyHost = proxy_host;
     }
 
-    const char *proxy_port = getenv("PROXY_PORT");
+    const char *proxy_port = getenv("S3_PROXY_PORT");
     if (proxy_port) {
         cfg.proxyPort = atoi(proxy_port);
     }
