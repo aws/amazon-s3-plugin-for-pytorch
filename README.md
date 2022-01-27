@@ -4,6 +4,18 @@ S3-plugin is a high performance PyTorch dataset library to efficiently access da
 
 The users have the flexibility to use either map-style or iterable-style dataset interfaces based on their needs. The library itself is file-format agnostic and presents objects in S3 as a binary buffer(blob). Users are free to apply any additional transformation on the data received from S3.
 
+## Compatible Images
+
+Only the following images are compatible with the Amazon S3 plugin for PyTorch:
+
+**Ubuntu 20.04**
+- **CPU**: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training:1.9.0-cpu-py38-ubuntu20.04-v1.1
+- **GPU**: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training:1.9.0-gpu-py38-cu111-ubuntu20.04-v1.1
+
+**Ubuntu 18.04**
+- **CPU**: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training:1.8.1-cpu-py36-ubuntu18.04-v1.6
+- **GPU**: 763104351884.dkr.ecr.us-west-2.amazonaws.com/pytorch-training:1.8.1-gpu-py36-cu111-ubuntu18.04-v1.7
+
 ## Installation
 
 You can install this package by following the below instructions.
