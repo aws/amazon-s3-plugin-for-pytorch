@@ -36,9 +36,32 @@ You can install this package by following the below instructions.
 #### Installing S3-Plugin via Wheel
 
 ```shell script
-# TODO Add final public wheels
+# List of wheels on Linux:
+# python 3.7: https://aws-s3-plugin.s3.us-west-2.amazonaws.com/binaries/0.0.1/bd37e27/awsio-0.0.1%2Bbd37e27-cp37-cp37m-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+# python 3.8: https://aws-s3-plugin.s3.us-west-2.amazonaws.com/binaries/0.0.1/bd37e27/awsio-0.0.1%2Bbd37e27-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+# python 3.9: https://aws-s3-plugin.s3.us-west-2.amazonaws.com/binaries/0.0.1/bd37e27/awsio-0.0.1%2Bbd37e27-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
 aws s3 cp <S3 URI> .
 pip install <whl name awsio-0.0.1-cp...whl>
+```
+
+#### Installing S3-Plugin from source
+
+```shell
+# install [aws-sdk-cpp](https://github.com/aws/aws-sdk-cpp). example installation guide
+git clone --recurse-submodules https://github.com/aws/aws-sdk-cpp
+cd aws-sdk-cpp/
+mkdir sdk-build
+cd sdk-build
+cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_ONLY="s3;transfer"
+make
+make install # may need sudo
+
+# install pybind11. example:
+conda install pybind11
+export CMAKE_PREFIX_PATH=$CMAKE_PREFIX_PATH:/usr/local/lib/python3.7/site-packages/pybind11
+
+# install from source
+python setup.py install
 ```
 
 ### Configuration
