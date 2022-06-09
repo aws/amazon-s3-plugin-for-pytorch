@@ -1,6 +1,6 @@
 # S3 Plugin
 
-**Note: As of April 5th, 2022, we're deprecating this plugin. [The S3 IO is upstreamed into `torchdata` package](https://github.com/pytorch/data/tree/main/torchdata/datapipes/iter/load#readme). We're supporting the new `torchdata` package, and continuously improving user experience and performance of the S3 IO datapipes. Please support and comment for the new S3 IO datapipes. Raise issues and create PRs if necessary.**
+**Note: As of April 5th, 2022, this plugin is in maintenance mode. [The S3 IO is in the process of being upstreamed into `torchdata` package](https://github.com/pytorch/data/tree/main/torchdata/datapipes/iter/load#readme). In the future, we will support the new `torchdata` package, and be continuously improving the user experience and performance of the S3 IO datapipes. Please support and comment for the new S3 IO datapipes. Raise issues and create PRs if necessary.**
 
 S3-plugin is a high performance PyTorch dataset library to efficiently access datasets stored in S3 buckets. It provides streaming data access to datasets of any size and thus eliminates the need to provision local storage capacity. The library is designed to leverage the high throughput that S3 offers to access objects with minimal latency.
 
